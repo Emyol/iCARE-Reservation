@@ -1,0 +1,257 @@
+import { google } from "googleapis";
+
+const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
+
+/**
+ * Real Google Sheet schema (from Google Form):
+ * A: Confirmation Email (TRUE/FALSE sent status)
+ * B: Confirmation Email (email body text)
+ * C: Timestamp
+ * D: Email Address
+ * E: Do you agree?
+ * F: Which room would you like to reserve?
+ * G: Purpose of Reservation
+ * H: Date for Reservation
+ * I: Start Time
+ * J: End Time
+ * K: Expected Number of Attendees
+ * L: Full Name (Last Name, First Name M.I.)
+ * M: FEU Tech Email Address
+ * N: Department/Office
+ * O: Role/Designation
+ * P: Will you need assistance with the room setup or equipment?
+ * Q: Additional Notes or Requests
+ */
+
+const SHEET_TAB = "Venue Reservation";
+
+// Column indices (0-based)
+const COL = {
+  CONFIRMATION_EMAIL: 0,
+  CONFIRMATION_EMAIL_BODY: 1,
+  TIMESTAMP: 2,
+  EMAIL: 3,
+  AGREE: 4,
+  ROOM: 5,
+  PURPOSE: 6,
+  DATE: 7,
+  START_TIME: 8,
+  END_TIME: 9,
+  ATTENDEES: 10,
+  FULL_NAME: 11,
+  FEU_EMAIL: 12,
+  DEPARTMENT: 13,
+  ROLE: 14,
+  EQUIPMENT: 15,
+  NOTES: 16,
+};
+
+function getAuth() {
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    },
+    scopes: SCOPES,
+  });
+  return auth;
+}
+
+function getSheets() {
+  const auth = getAuth();
+  return google.sheets({ version: "v4", auth });
+}
+
+/**
+ * Combine a date string and time string into an ISO 8601 datetime.
+ * Handles various Google Forms date/time formats.
+ */
+function combineDateAndTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+
+  try {
+    // Parse the date part — could be "MM/DD/YYYY", "YYYY-MM-DD", "Month DD, YYYY", etc.
+    const dateParsed = new Date(dateStr);
+    if (isNaN(dateParsed.getTime())) return null;
+
+    const year = dateParsed.getFullYear();
+    const month = dateParsed.getMonth();
+    const day = dateParsed.getDate();
+
+    // Parse the time part — could be "HH:MM:SS", "HH:MM", "H:MM AM/PM", etc.
+    let hours = 0;
+    let minutes = 0;
+
+    // Try "H:MM:SS AM/PM" or "H:MM AM/PM" format
+    const ampmMatch = timeStr.match(
+      /(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)/i,
+    );
+    if (ampmMatch) {
+      hours = parseInt(ampmMatch[1], 10);
+      minutes = parseInt(ampmMatch[2], 10);
+      const period = ampmMatch[4].toUpperCase();
+      if (period === "PM" && hours !== 12) hours += 12;
+      if (period === "AM" && hours === 12) hours = 0;
+    } else {
+      // Try 24-hour "HH:MM" or "HH:MM:SS"
+      const h24Match = timeStr.match(/(\d{1,2}):(\d{2})/);
+      if (h24Match) {
+        hours = parseInt(h24Match[1], 10);
+        minutes = parseInt(h24Match[2], 10);
+      }
+    }
+
+    const combined = new Date(year, month, day, hours, minutes);
+    return combined.toISOString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read all reservations from the Google Sheet.
+ * Maps the real form columns to our app's data shape.
+ */
+export async function getReservations() {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${SHEET_TAB}'!A:Q`,
+  });
+
+  const rows = response.data.values;
+
+  console.log("[DEBUG] Raw rows from sheet:", rows ? rows.length : 0);
+  if (rows && rows.length > 1) {
+    console.log("[DEBUG] Header row:", JSON.stringify(rows[0]));
+    console.log("[DEBUG] First data row:", JSON.stringify(rows[1]));
+  }
+
+  if (!rows || rows.length <= 1) {
+    return [];
+  }
+
+  // Skip header row (index 0)
+  const dataRows = rows.slice(1);
+
+  return dataRows
+    .map((row) => {
+      const room = row[COL.ROOM] || "";
+      const purpose = row[COL.PURPOSE] || "";
+      const dateStr = row[COL.DATE] || "";
+      const startTimeStr = row[COL.START_TIME] || "";
+      const endTimeStr = row[COL.END_TIME] || "";
+      const fullName = row[COL.FULL_NAME] || "";
+      const timestamp = row[COL.TIMESTAMP] || "";
+
+      const startTime = combineDateAndTime(dateStr, startTimeStr);
+      const endTime = combineDateAndTime(dateStr, endTimeStr);
+
+      // Skip rows with invalid/missing dates
+      if (!startTime || !endTime) return null;
+
+      return {
+        timestamp,
+        room,
+        eventName: purpose || fullName || "Reservation",
+        startTime,
+        endTime,
+        fullName,
+        department: row[COL.DEPARTMENT] || "",
+        attendees: row[COL.ATTENDEES] || "",
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Append a new reservation row to the Google Sheet.
+ * Admin manual bookings fill the relevant columns, leaving form-only columns empty.
+ */
+export async function appendReservation({
+  room,
+  eventName,
+  startTime,
+  endTime,
+  fullName = "Admin",
+  email = "",
+  attendees = "",
+}) {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+  const startDate = new Date(startTime);
+  const endDate = new Date(endTime);
+
+  // Format date as "MM/DD/YYYY" for the Date column
+  const dateFormatted = `${(startDate.getMonth() + 1).toString().padStart(2, "0")}/${startDate.getDate().toString().padStart(2, "0")}/${startDate.getFullYear()}`;
+
+  // Format times as "HH:MM AM/PM"
+  const formatTime = (d) => {
+    let h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, "0");
+    const period = h >= 12 ? "PM" : "AM";
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    return `${h}:${m} ${period}`;
+  };
+
+  const timestamp = new Date().toLocaleString();
+
+  // Build row matching the 17-column schema (A:Q)
+  // A: Confirmation Email (sent status) → empty (admin booking)
+  // B: Confirmation Email (body text)   → empty (admin booking)
+  // C: Timestamp           → current time
+  // D: Email Address       → empty
+  // E: Do you agree?       → "Yes"
+  // F: Room                → room
+  // G: Purpose             → eventName
+  // H: Date                → date
+  // I: Start Time          → formatted
+  // J: End Time            → formatted
+  // K: Attendees           → empty
+  // L: Full Name           → "Admin"
+  // M: FEU Email           → empty
+  // N: Department          → "Administration"
+  // O: Role                → "Administrator"
+  // P: Equipment           → empty
+  // Q: Notes               → "Manual booking via iCARE Dashboard"
+  const newRow = [
+    "", // A: Confirmation Email (status)
+    "", // B: Confirmation Email (body)
+    timestamp, // C: Timestamp
+    email, // D: Email Address
+    "Yes", // E: Do you agree?
+    room, // F: Room
+    eventName, // G: Purpose of Reservation
+    dateFormatted, // H: Date for Reservation
+    formatTime(startDate), // I: Start Time
+    formatTime(endDate), // J: End Time
+    attendees, // K: Expected Number of Attendees
+    fullName, // L: Full Name
+    email, // M: FEU Tech Email Address
+    "Administration", // N: Department/Office
+    "Administrator", // O: Role/Designation
+    "", // P: Equipment assistance
+    "Manual booking via iCARE Dashboard", // Q: Additional Notes
+  ];
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: `'${SHEET_TAB}'!A:Q`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [newRow],
+    },
+  });
+
+  return {
+    timestamp,
+    room,
+    eventName,
+    startTime: startDate.toISOString(),
+    endTime: endDate.toISOString(),
+  };
+}
