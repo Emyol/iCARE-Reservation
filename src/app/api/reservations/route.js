@@ -51,7 +51,8 @@ export async function POST(request) {
 
     // Parse and validate request body
     const body = await request.json();
-    const { room, eventName, startTime, endTime, fullName, email, attendees } = body;
+    const { room, eventName, startTime, endTime, fullName, email, attendees } =
+      body;
 
     if (!room || !eventName || !startTime || !endTime) {
       return NextResponse.json(
@@ -78,12 +79,12 @@ export async function POST(request) {
       );
     }
 
-    // Append to Google Sheet
+    // Append to Google Sheet — pass timezone-free datetime strings
     const reservation = await appendReservation({
       room,
       eventName,
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
+      startTime,
+      endTime,
       fullName: fullName || "Admin",
       email: email || "",
       attendees: attendees || "",

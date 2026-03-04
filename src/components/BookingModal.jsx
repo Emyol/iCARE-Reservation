@@ -65,8 +65,8 @@ export default function BookingModal({ onClose, onBooked }) {
         body: JSON.stringify({
           room,
           eventName: eventName.trim(),
-          startTime: new Date(startTime).toISOString(),
-          endTime: new Date(endTime).toISOString(),
+          startTime,
+          endTime,
           fullName: fullName.trim(),
           email: email.trim(),
           attendees: attendees.trim(),

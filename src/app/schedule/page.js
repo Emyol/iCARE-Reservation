@@ -32,9 +32,14 @@ export default function SchedulePage() {
     fetchData();
   }, []);
 
-  const filtered = reservations.filter(
-    (r) => new Date(r.startTime).toISOString().slice(0, 10) === selectedDate,
-  );
+  const filtered = reservations.filter((r) => {
+    // Compare using local date to avoid UTC conversion shifting the date
+    const d = new Date(r.startTime);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}` === selectedDate;
+  });
 
   const formatTime = (iso) =>
     new Date(iso).toLocaleTimeString([], {

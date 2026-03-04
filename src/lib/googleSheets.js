@@ -70,13 +70,30 @@ function combineDateAndTime(dateStr, timeStr) {
   if (!dateStr || !timeStr) return null;
 
   try {
-    // Parse the date part — could be "MM/DD/YYYY", "YYYY-MM-DD", "Month DD, YYYY", etc.
-    const dateParsed = new Date(dateStr);
-    if (isNaN(dateParsed.getTime())) return null;
+    // Parse date components directly to avoid timezone issues with Date constructor
+    let year, month, day;
 
-    const year = dateParsed.getFullYear();
-    const month = dateParsed.getMonth();
-    const day = dateParsed.getDate();
+    // Try "YYYY-MM-DD" format
+    const isoDateMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    // Try "MM/DD/YYYY" format
+    const usDateMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+
+    if (isoDateMatch) {
+      year = parseInt(isoDateMatch[1], 10);
+      month = parseInt(isoDateMatch[2], 10);
+      day = parseInt(isoDateMatch[3], 10);
+    } else if (usDateMatch) {
+      month = parseInt(usDateMatch[1], 10);
+      day = parseInt(usDateMatch[2], 10);
+      year = parseInt(usDateMatch[3], 10);
+    } else {
+      // Fallback: try Date constructor for other formats (e.g. "Month DD, YYYY")
+      const dateParsed = new Date(dateStr + " 00:00:00");
+      if (isNaN(dateParsed.getTime())) return null;
+      year = dateParsed.getFullYear();
+      month = dateParsed.getMonth() + 1;
+      day = dateParsed.getDate();
+    }
 
     // Parse the time part — could be "HH:MM:SS", "HH:MM", "H:MM AM/PM", etc.
     let hours = 0;
@@ -101,8 +118,10 @@ function combineDateAndTime(dateStr, timeStr) {
       }
     }
 
-    const combined = new Date(year, month, day, hours, minutes);
-    return combined.toISOString();
+    // Format as timezone-free ISO string to preserve the wall-clock time.
+    // Using .toISOString() would convert to UTC and shift the time incorrectly.
+    const pad = (n) => n.toString().padStart(2, "0");
+    return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
   } catch {
     return null;
   }
@@ -182,16 +201,41 @@ export async function appendReservation({
   const sheets = getSheets();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-  const startDate = new Date(startTime);
-  const endDate = new Date(endTime);
+  // Parse datetime components directly from the timezone-free string
+  // to avoid server timezone issues. Input format: "YYYY-MM-DDTHH:MM" or "YYYY-MM-DDTHH:MM:SS"
+  function parseDateTimeParts(dtStr) {
+    const match = dtStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (match) {
+      return {
+        year: parseInt(match[1], 10),
+        month: parseInt(match[2], 10),
+        day: parseInt(match[3], 10),
+        hours: parseInt(match[4], 10),
+        minutes: parseInt(match[5], 10),
+      };
+    }
+    // Fallback for other formats — use Date (server-local)
+    const d = new Date(dtStr);
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+      hours: d.getHours(),
+      minutes: d.getMinutes(),
+    };
+  }
+
+  const startParts = parseDateTimeParts(startTime);
+  const endParts = parseDateTimeParts(endTime);
 
   // Format date as "MM/DD/YYYY" for the Date column
-  const dateFormatted = `${(startDate.getMonth() + 1).toString().padStart(2, "0")}/${startDate.getDate().toString().padStart(2, "0")}/${startDate.getFullYear()}`;
+  const pad2 = (n) => n.toString().padStart(2, "0");
+  const dateFormatted = `${pad2(startParts.month)}/${pad2(startParts.day)}/${startParts.year}`;
 
   // Format times as "HH:MM AM/PM"
-  const formatTime = (d) => {
-    let h = d.getHours();
-    const m = d.getMinutes().toString().padStart(2, "0");
+  const formatTime = (parts) => {
+    let h = parts.hours;
+    const m = parts.minutes.toString().padStart(2, "0");
     const period = h >= 12 ? "PM" : "AM";
     if (h > 12) h -= 12;
     if (h === 0) h = 12;
@@ -227,8 +271,8 @@ export async function appendReservation({
     room, // F: Room
     eventName, // G: Purpose of Reservation
     dateFormatted, // H: Date for Reservation
-    formatTime(startDate), // I: Start Time
-    formatTime(endDate), // J: End Time
+    formatTime(startParts), // I: Start Time
+    formatTime(endParts), // J: End Time
     attendees, // K: Expected Number of Attendees
     fullName, // L: Full Name
     email, // M: FEU Tech Email Address
@@ -247,11 +291,12 @@ export async function appendReservation({
     },
   });
 
+  // Return timezone-free strings consistent with getReservations()
   return {
     timestamp,
     room,
     eventName,
-    startTime: startDate.toISOString(),
-    endTime: endDate.toISOString(),
+    startTime,
+    endTime,
   };
 }
