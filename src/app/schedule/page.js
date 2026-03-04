@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { useAdmin } from "@/components/AdminProvider";
 import AdminLoginModal from "@/components/AdminLoginModal";
+import EmailModal from "@/components/EmailModal";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 
 export default function SchedulePage() {
   const { isAdmin, login, logout } = useAdmin();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [emailTarget, setEmailTarget] = useState(null);
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,19 +18,20 @@ export default function SchedulePage() {
     new Date().toISOString().slice(0, 10),
   );
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/reservations");
-        if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-        const data = await res.json();
-        setReservations(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+  async function fetchData() {
+    try {
+      const res = await fetch("/api/reservations");
+      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
+      const data = await res.json();
+      setReservations(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -47,8 +50,8 @@ export default function SchedulePage() {
       minute: "2-digit",
     });
 
-  function handleLogin() {
-    login();
+  function handleLogin(adminInfo) {
+    login(adminInfo);
     setShowLoginModal(false);
   }
 
@@ -108,7 +111,7 @@ export default function SchedulePage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="bg-slate-900/60 rounded-xl border border-white/5 p-12 text-center">
+            <div className="glass-panel/60 rounded-xl border border-white/5 p-12 text-center">
               <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">
                 event_busy
               </span>
@@ -125,7 +128,7 @@ export default function SchedulePage() {
                   return (
                     <div
                       key={i}
-                      className={`bg-slate-900/60 rounded-xl border p-4 flex items-center gap-4 ${
+                      className={`glass-panel/60 rounded-xl border p-4 flex items-center gap-4 ${
                         isAVR ? "border-emerald-500/20" : "border-blue-500/20"
                       }`}
                     >
@@ -150,17 +153,38 @@ export default function SchedulePage() {
                           {r.room}
                         </p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p
-                          suppressHydrationWarning
-                          className="text-sm font-medium text-slate-200"
-                        >
-                          {formatTime(r.startTime)} – {formatTime(r.endTime)}
-                        </p>
-                        {r.fullName && (
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            {r.fullName}
+                      <div className="text-right shrink-0 flex items-center gap-2">
+                        <div>
+                          <p
+                            suppressHydrationWarning
+                            className="text-sm font-medium text-slate-200"
+                          >
+                            {formatTime(r.startTime)} – {formatTime(r.endTime)}
                           </p>
+                          {r.fullName && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {r.fullName}
+                            </p>
+                          )}
+                        </div>
+                        {isAdmin && (
+                          <button
+                            onClick={() => setEmailTarget(r)}
+                            className={`size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                              r.emailSent
+                                ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                                : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
+                            }`}
+                            title={
+                              r.emailSent
+                                ? "Email already sent — click to resend"
+                                : "Send email to reservant"
+                            }
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              {r.emailSent ? "mark_email_read" : "mail"}
+                            </span>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -183,6 +207,16 @@ export default function SchedulePage() {
           onLogin={handleLogin}
         />
       )}
+      {emailTarget && (
+        <EmailModal
+          reservation={emailTarget}
+          onClose={() => setEmailTarget(null)}
+          onSent={() => {
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 }
+

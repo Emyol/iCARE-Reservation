@@ -6,11 +6,13 @@ import Sidebar from "@/components/Sidebar";
 import TimelineChart from "@/components/TimelineChart";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import BookingModal from "@/components/BookingModal";
+import EmailModal from "@/components/EmailModal";
 
 export default function DashboardPage() {
-  const { isAdmin, login, logout } = useAdmin();
+  const { isAdmin, adminInfo, login, logout } = useAdmin();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [emailTarget, setEmailTarget] = useState(null);
 
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,8 +98,8 @@ export default function DashboardPage() {
     .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
     .slice(0, 5);
 
-  function handleLogin() {
-    login();
+  function handleLogin(adminInfo) {
+    login(adminInfo);
     setShowLoginModal(false);
   }
 
@@ -125,35 +127,10 @@ export default function DashboardPage() {
         onLogout={logout}
       />
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        >
-          <div className="w-64 h-full" onClick={(e) => e.stopPropagation()}>
-            <Sidebar
-              isAdmin={isAdmin}
-              onLoginClick={() => {
-                setShowLoginModal(true);
-                setSidebarOpen(false);
-              }}
-              onLogout={logout}
-            />
-          </div>
-        </div>
-      )}
-
       <main className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-slate-400 hover:text-white transition-colors"
-            >
-              <span className="material-symbols-outlined">menu</span>
-            </button>
             <h2 className="text-lg md:text-xl font-bold tracking-tight">
               <span className="text-teal-400">iCARE</span> Dashboard
             </h2>
@@ -173,7 +150,7 @@ export default function DashboardPage() {
             {isAdmin && (
               <button
                 onClick={() => setShowBookingModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-teal-600 text-white text-sm font-semibold rounded-lg shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition-all duration-200"
+                className="flex items-center gap-2 px-4 py-2 auro-button text-white text-sm font-semibold rounded-lg shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition-all duration-200"
               >
                 <span className="material-symbols-outlined text-[20px]">
                   add
@@ -231,7 +208,7 @@ export default function DashboardPage() {
               </button>
 
               {showNotifications && (
-                <div className="absolute top-12 right-0 w-80 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="absolute top-12 right-0 w-80 glass-panel border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
                   <div className="p-3 border-b border-white/5 flex items-center justify-between">
                     <span className="text-sm font-semibold text-slate-200">
                       Recent Reservations
@@ -380,7 +357,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : weekDays.length === 0 ? (
-                <div className="bg-slate-900/60 rounded-xl border border-white/5 p-12 text-center">
+                <div className="glass-panel p-12 text-center">
                   <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">
                     event_available
                   </span>
@@ -417,7 +394,7 @@ export default function DashboardPage() {
                             return (
                               <div
                                 key={i}
-                                className={`bg-slate-900/60 rounded-xl border p-4 flex items-center gap-4 ${
+                                className={`glass-panel/60 rounded-xl border p-4 flex items-center gap-4 ${
                                   isAVR
                                     ? "border-emerald-500/20"
                                     : "border-blue-500/20"
@@ -448,18 +425,41 @@ export default function DashboardPage() {
                                     {r.room}
                                   </p>
                                 </div>
-                                <div className="text-right shrink-0">
-                                  <p
-                                    suppressHydrationWarning
-                                    className="text-sm font-medium text-slate-200"
-                                  >
-                                    {formatTime(r.startTime)} –{" "}
-                                    {formatTime(r.endTime)}
-                                  </p>
-                                  {r.fullName && (
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                      {r.fullName}
+                                <div className="text-right shrink-0 flex items-center gap-2">
+                                  <div>
+                                    <p
+                                      suppressHydrationWarning
+                                      className="text-sm font-medium text-slate-200"
+                                    >
+                                      {formatTime(r.startTime)} –{" "}
+                                      {formatTime(r.endTime)}
                                     </p>
+                                    {r.fullName && (
+                                      <p className="text-xs text-slate-500 mt-0.5">
+                                        {r.fullName}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {isAdmin && (
+                                    <button
+                                      onClick={() => setEmailTarget(r)}
+                                      className={`size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                        r.emailSent
+                                          ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                                          : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
+                                      }`}
+                                      title={
+                                        r.emailSent
+                                          ? "Email already sent — click to resend"
+                                          : "Send email to reservant"
+                                      }
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">
+                                        {r.emailSent
+                                          ? "mark_email_read"
+                                          : "mail"}
+                                      </span>
+                                    </button>
                                   )}
                                 </div>
                               </div>
@@ -475,7 +475,7 @@ export default function DashboardPage() {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            <div className="bg-slate-900/60 p-6 rounded-xl border border-white/5 flex items-center gap-4 hover:border-emerald-500/20 transition-colors">
+            <div className="glass-panel p-6 flex items-center gap-4 hover:border-emerald-500/20 transition-colors">
               <div className="size-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-emerald-500">
                   check_circle
@@ -489,7 +489,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-slate-900/60 p-6 rounded-xl border border-white/5 flex items-center gap-4 hover:border-[#0f49bd]/20 transition-colors">
+            <div className="glass-panel p-6 flex items-center gap-4 hover:border-[#0f49bd]/20 transition-colors">
               <div className="size-12 rounded-lg bg-[#0f49bd]/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-[#0f49bd]">
                   videocam
@@ -503,7 +503,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-slate-900/60 p-6 rounded-xl border border-white/5 flex items-center gap-4 hover:border-amber-500/20 transition-colors">
+            <div className="glass-panel p-6 flex items-center gap-4 hover:border-amber-500/20 transition-colors">
               <div className="size-12 rounded-lg bg-amber-500/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-amber-500">
                   auto_stories
@@ -537,6 +537,15 @@ export default function DashboardPage() {
         <BookingModal
           onClose={() => setShowBookingModal(false)}
           onBooked={handleBooked}
+        />
+      )}
+      {emailTarget && (
+        <EmailModal
+          reservation={emailTarget}
+          onClose={() => setEmailTarget(null)}
+          onSent={() => {
+            fetchReservations();
+          }}
         />
       )}
     </div>

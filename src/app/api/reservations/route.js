@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { getReservations, appendReservation } from "@/lib/googleSheets";
+import {
+  findAdmin,
+  sendConfirmationEmail,
+  sendConflictEmail,
+  findConflict,
+} from "@/lib/email";
 
 /**
  * GET /api/reservations
@@ -49,6 +55,9 @@ export async function POST(request) {
       );
     }
 
+    // Decode token to get admin identity
+    const decoded = jwt.decode(token);
+
     // Parse and validate request body
     const body = await request.json();
     const { room, eventName, startTime, endTime, fullName, email, attendees } =
@@ -79,6 +88,18 @@ export async function POST(request) {
       );
     }
 
+    // Check for conflicts BEFORE appending
+    let conflictingReservation = null;
+    try {
+      const allReservations = await getReservations();
+      conflictingReservation = findConflict(
+        { room, startTime, endTime, eventName },
+        allReservations,
+      );
+    } catch (err) {
+      console.error("Error checking conflicts:", err.message);
+    }
+
     // Append to Google Sheet — pass timezone-free datetime strings
     const reservation = await appendReservation({
       room,
@@ -90,7 +111,52 @@ export async function POST(request) {
       attendees: attendees || "",
     });
 
-    return NextResponse.json({ success: true, reservation }, { status: 201 });
+    // Auto-send email if reservant email is provided and admin has SMTP configured
+    let emailResult = null;
+    if (email && decoded?.username) {
+      const admin = findAdmin(decoded.username);
+      if (admin && admin.smtpPassword) {
+        try {
+          const reservationForEmail = {
+            ...reservation,
+            recipientEmail: email,
+          };
+          if (conflictingReservation) {
+            await sendConflictEmail({
+              admin,
+              reservation: reservationForEmail,
+              conflictingReservation,
+            });
+            emailResult = { sent: true, type: "conflict" };
+          } else {
+            await sendConfirmationEmail({
+              admin,
+              reservation: reservationForEmail,
+            });
+            emailResult = { sent: true, type: "confirmation" };
+          }
+        } catch (err) {
+          console.error("Auto-email failed:", err.message);
+          emailResult = { sent: false, error: err.message };
+        }
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        reservation,
+        conflict: conflictingReservation
+          ? {
+              eventName: conflictingReservation.eventName,
+              startTime: conflictingReservation.startTime,
+              endTime: conflictingReservation.endTime,
+            }
+          : null,
+        email: emailResult,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Error creating reservation:", error);
     return NextResponse.json(

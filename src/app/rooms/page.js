@@ -58,8 +58,8 @@ export default function RoomsPage() {
   const { isAdmin, login, logout } = useAdmin();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  function handleLogin() {
-    login();
+  function handleLogin(adminInfo) {
+    login(adminInfo);
     setShowLoginModal(false);
   }
 
@@ -105,7 +105,7 @@ export default function RoomsPage() {
               return (
                 <div
                   key={room.name}
-                  className={`bg-slate-900/60 rounded-xl border ${c.border} p-6 flex flex-col gap-4 transition-colors`}
+                  className={`glass-panel/60 rounded-xl border ${c.border} p-6 flex flex-col gap-4 transition-colors`}
                 >
                   <div className="flex items-start gap-4">
                     <div
@@ -146,7 +146,7 @@ export default function RoomsPage() {
             })}
           </div>
 
-          <div className="bg-slate-900/60 rounded-xl border border-white/5 p-6 flex items-start gap-4">
+          <div className="glass-panel/60 rounded-xl border border-white/5 p-6 flex items-start gap-4">
             <span className="material-symbols-outlined text-[#0f49bd] shrink-0 mt-0.5">
               info
             </span>
@@ -183,3 +183,4 @@ export default function RoomsPage() {
     </div>
   );
 }
+

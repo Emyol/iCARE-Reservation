@@ -156,7 +156,7 @@ export async function getReservations() {
   const dataRows = rows.slice(1);
 
   return dataRows
-    .map((row) => {
+    .map((row, idx) => {
       const room = row[COL.ROOM] || "";
       const purpose = row[COL.PURPOSE] || "";
       const dateStr = row[COL.DATE] || "";
@@ -164,6 +164,9 @@ export async function getReservations() {
       const endTimeStr = row[COL.END_TIME] || "";
       const fullName = row[COL.FULL_NAME] || "";
       const timestamp = row[COL.TIMESTAMP] || "";
+      const emailSent = (row[COL.CONFIRMATION_EMAIL] || "").toUpperCase() === "TRUE";
+      // Use FEU Tech Email (col M) first, then Email Address (col D)
+      const recipientEmail = row[COL.FEU_EMAIL] || row[COL.EMAIL] || "";
 
       const startTime = combineDateAndTime(dateStr, startTimeStr);
       const endTime = combineDateAndTime(dateStr, endTimeStr);
@@ -180,6 +183,9 @@ export async function getReservations() {
         fullName,
         department: row[COL.DEPARTMENT] || "",
         attendees: row[COL.ATTENDEES] || "",
+        emailSent,
+        recipientEmail,
+        rowIndex: idx + 2, // +2 because: +1 for header, +1 for 1-based row numbers
       };
     })
     .filter(Boolean);
@@ -298,5 +304,26 @@ export async function appendReservation({
     eventName,
     startTime,
     endTime,
+    fullName,
+    recipientEmail: email,
+    emailSent: false,
   };
+}
+
+/**
+ * Update the email-sent status (column A) for a specific row.
+ * Also stores a note in column B about when/how the email was sent.
+ */
+export async function updateEmailStatus(rowIndex, emailNote = "") {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${SHEET_TAB}'!A${rowIndex}:B${rowIndex}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [["TRUE", emailNote || `Sent via iCARE on ${new Date().toLocaleString()}`]],
+    },
+  });
 }

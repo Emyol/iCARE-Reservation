@@ -88,8 +88,8 @@ export default function ReportsPage() {
     },
   };
 
-  function handleLogin() {
-    login();
+  function handleLogin(adminInfo) {
+    login(adminInfo);
     setShowLoginModal(false);
   }
 
@@ -141,7 +141,7 @@ export default function ReportsPage() {
               return (
                 <div
                   key={s.label}
-                  className={`bg-slate-900/60 p-6 rounded-xl border border-white/5 ${c.border} flex items-center gap-4 transition-colors`}
+                  className={`glass-panel/60 p-6 rounded-xl border border-white/5 ${c.border} flex items-center gap-4 transition-colors`}
                 >
                   <div
                     className={`size-12 rounded-lg ${c.bg} flex items-center justify-center`}
@@ -166,7 +166,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Bookings by Month */}
-          <div className="bg-slate-900/60 rounded-xl border border-white/5 overflow-hidden">
+          <div className="glass-panel/60 rounded-xl border border-white/5 overflow-hidden">
             <div className="p-4 border-b border-white/5 flex items-center gap-2">
               <span className="material-symbols-outlined text-slate-400 text-[20px]">
                 calendar_month
@@ -230,3 +230,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+

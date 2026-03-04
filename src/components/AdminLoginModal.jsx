@@ -4,10 +4,11 @@ import { useState } from "react";
 
 /**
  * Admin Login Modal
- * Sends POST /api/auth with password.
- * On success, calls onLogin() to update parent state.
+ * Sends POST /api/auth with username + password.
+ * On success, calls onLogin(adminInfo) to update parent state.
  */
 export default function AdminLoginModal({ onClose, onLogin }) {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,11 @@ export default function AdminLoginModal({ onClose, onLogin }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+
+    if (!username.trim()) {
+      setError("Please enter your username");
+      return;
+    }
 
     if (!password.trim()) {
       setError("Please enter a password");
@@ -28,13 +34,13 @@ export default function AdminLoginModal({ onClose, onLogin }) {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
-        onLogin();
+        onLogin(data.adminInfo || null);
       } else {
         setError(data.error || "Invalid credentials");
       }
@@ -61,13 +67,35 @@ export default function AdminLoginModal({ onClose, onLogin }) {
           <div>
             <h2 className="text-xl font-bold text-white">Welcome back</h2>
             <p className="text-slate-400 text-sm mt-1">
-              Enter your admin password to manage reservations.
+              Enter your admin credentials to manage reservations.
             </p>
           </div>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 pb-2 space-y-4">
+          {/* Username */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">
+              Username
+            </label>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                person
+              </span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd] focus:border-transparent outline-none transition-all"
+                placeholder="Enter username"
+                autoFocus
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          {/* Password */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-slate-300">
               Password
@@ -82,7 +110,6 @@ export default function AdminLoginModal({ onClose, onLogin }) {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-12 pr-12 py-3.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd] focus:border-transparent outline-none transition-all"
                 placeholder="••••••••"
-                autoFocus
                 disabled={loading}
               />
               <button
