@@ -112,7 +112,7 @@ export default function LandingPage() {
             </h1>
             <p className="text-slate-300 text-xl mt-4 leading-relaxed max-w-2xl mx-auto">
               Real-time room scheduling for iTamaraw Center for Academic
-              Resource and Enrichment.
+              Resources and Enrichment.
               <br />
               View, manage, and track AVR and Training Room bookings with ease.
             </p>
