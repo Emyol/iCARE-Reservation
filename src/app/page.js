@@ -8,8 +8,8 @@ function SplashScreen({ onComplete }) {
   const line1 = "Always for the students,";
   const line2 = "iCARE for you.";
   const speed = 55;
-  const pauseAfterComma = 1000;
-  const pauseBeforeReveal = 1000;
+  const pauseAfterComma = 800;
+  const pauseBeforeReveal = 800;
 
   const [display, setDisplay] = useState("");
   const [phase, setPhase] = useState("typing1"); // typing1 | pause | typing2 | done
