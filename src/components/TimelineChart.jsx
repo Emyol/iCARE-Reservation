@@ -23,6 +23,7 @@ export default function TimelineChart({
   accentColor = "emerald",
   legend = [],
   loading = false,
+  onEventClick,
 }) {
   const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 08:00 to 19:00
   const timelineStart = 8; // 08:00
@@ -241,6 +242,7 @@ export default function TimelineChart({
                       className={`absolute inset-y-2 ${eventColorScheme.bg} border-l-4 ${eventColorScheme.border} rounded-r-md p-2 overflow-hidden cursor-pointer ${eventColorScheme.hoverBg} transition-all duration-200 timeline-event z-10`}
                       style={{ left: pos.left, width: pos.width }}
                       title={`${event.eventName}\n${new Date(event.startTime).toLocaleTimeString()} - ${new Date(event.endTime).toLocaleTimeString()}`}
+                      onClick={() => onEventClick?.(event)}
                     >
                       <p
                         className={`text-[10px] font-bold ${eventColorScheme.textPrimary} truncate`}

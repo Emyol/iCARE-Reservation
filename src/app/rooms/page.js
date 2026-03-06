@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdmin } from "@/components/AdminProvider";
 import AdminLoginModal from "@/components/AdminLoginModal";
+import AvailabilityChecker from "@/components/AvailabilityChecker";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 
@@ -57,6 +58,19 @@ const colorMap = {
 export default function RoomsPage() {
   const { isAdmin, login, logout } = useAdmin();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [reservations, setReservations] = useState([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch("/api/reservations");
+        if (!res.ok) return;
+        const data = await res.json();
+        setReservations(data);
+      } catch {}
+    }
+    fetchData();
+  }, []);
 
   function handleLogin(adminInfo) {
     login(adminInfo);
@@ -145,6 +159,8 @@ export default function RoomsPage() {
               );
             })}
           </div>
+
+          <AvailabilityChecker reservations={reservations} />
 
           <div className="glass-panel/60 rounded-xl border border-white/5 p-6 flex items-start gap-4">
             <span className="material-symbols-outlined text-[#0f49bd] shrink-0 mt-0.5">

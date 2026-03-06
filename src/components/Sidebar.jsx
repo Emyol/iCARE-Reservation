@@ -17,6 +17,8 @@ import {
   BarChart3,
   LogOut,
   ShieldCheck,
+  AlertTriangle,
+  History,
 } from "lucide-react";
 
 export default function Sidebar({ isAdmin, onLoginClick, onLogout }) {
@@ -51,6 +53,20 @@ export default function Sidebar({ isAdmin, onLoginClick, onLogout }) {
               label="Reports"
               icon={<BarChart3 className="h-5 w-5 flex-shrink-0" />}
             />
+            {isAdmin && (
+              <>
+                <SidebarNavLink
+                  href="/conflicts"
+                  label="Conflicts"
+                  icon={<AlertTriangle className="h-5 w-5 flex-shrink-0" />}
+                />
+                <SidebarNavLink
+                  href="/activity"
+                  label="Activity Log"
+                  icon={<History className="h-5 w-5 flex-shrink-0" />}
+                />
+              </>
+            )}
           </div>
         </div>
 

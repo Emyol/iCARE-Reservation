@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { getReservations, appendReservation } from "@/lib/googleSheets";
+import {
+  getReservations,
+  appendReservation,
+  appendAuditLog,
+} from "@/lib/googleSheets";
 import {
   findAdmin,
   sendConfirmationEmail,
@@ -142,6 +146,17 @@ export async function POST(request) {
       }
     }
 
+    // Audit log
+    try {
+      await appendAuditLog({
+        action: "CREATE",
+        admin: decoded?.name || decoded?.username || "Admin",
+        details: `${eventName} — ${room} (${startTime} to ${endTime})`,
+      });
+    } catch (err) {
+      console.error("Audit log failed:", err.message);
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -151,6 +166,9 @@ export async function POST(request) {
               eventName: conflictingReservation.eventName,
               startTime: conflictingReservation.startTime,
               endTime: conflictingReservation.endTime,
+              fullName: conflictingReservation.fullName || "",
+              timestamp: conflictingReservation.timestamp || "",
+              hasPriority: true,
             }
           : null,
         email: emailResult,

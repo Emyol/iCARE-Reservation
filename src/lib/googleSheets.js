@@ -327,3 +327,168 @@ export async function updateEmailStatus(rowIndex, emailNote = "") {
     },
   });
 }
+
+/**
+ * Update a reservation row in-place (columns F–Q).
+ * Only provided fields are updated; others are preserved.
+ */
+export async function updateReservation(rowIndex, fields) {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+  // Fetch current row to preserve unchanged columns
+  const current = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${SHEET_TAB}'!A${rowIndex}:Q${rowIndex}`,
+  });
+  const row = current.data.values?.[0] || new Array(17).fill("");
+
+  // Helper for date/time formatting
+  const pad2 = (n) => n.toString().padStart(2, "0");
+  function parseDateTimeParts(dtStr) {
+    const match = dtStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (match) {
+      return {
+        year: parseInt(match[1], 10),
+        month: parseInt(match[2], 10),
+        day: parseInt(match[3], 10),
+        hours: parseInt(match[4], 10),
+        minutes: parseInt(match[5], 10),
+      };
+    }
+    const d = new Date(dtStr);
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+      hours: d.getHours(),
+      minutes: d.getMinutes(),
+    };
+  }
+  const formatTime = (parts) => {
+    let h = parts.hours;
+    const m = parts.minutes.toString().padStart(2, "0");
+    const period = h >= 12 ? "PM" : "AM";
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    return `${h}:${m} ${period}`;
+  };
+
+  // Apply updates
+  if (fields.room !== undefined) row[COL.ROOM] = fields.room;
+  if (fields.eventName !== undefined) row[COL.PURPOSE] = fields.eventName;
+  if (fields.fullName !== undefined) row[COL.FULL_NAME] = fields.fullName;
+  if (fields.attendees !== undefined) row[COL.ATTENDEES] = fields.attendees;
+  if (fields.email !== undefined) {
+    row[COL.EMAIL] = fields.email;
+    row[COL.FEU_EMAIL] = fields.email;
+  }
+
+  if (fields.startTime) {
+    const sp = parseDateTimeParts(fields.startTime);
+    row[COL.DATE] = `${pad2(sp.month)}/${pad2(sp.day)}/${sp.year}`;
+    row[COL.START_TIME] = formatTime(sp);
+  }
+  if (fields.endTime) {
+    const ep = parseDateTimeParts(fields.endTime);
+    row[COL.END_TIME] = formatTime(ep);
+  }
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${SHEET_TAB}'!A${rowIndex}:Q${rowIndex}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [row],
+    },
+  });
+}
+
+/**
+ * Delete a reservation by clearing the row content (preserves row numbering).
+ */
+export async function deleteReservation(rowIndex) {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+  const emptyRow = new Array(17).fill("");
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${SHEET_TAB}'!A${rowIndex}:Q${rowIndex}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [emptyRow],
+    },
+  });
+}
+
+/**
+ * Append an entry to the Audit Log sheet tab.
+ * Auto-creates the tab with headers if it doesn't exist.
+ */
+const AUDIT_TAB = "Audit Log";
+
+export async function appendAuditLog({ action, admin, details, targetRow }) {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+  // Ensure the Audit Log tab exists
+  try {
+    await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `'${AUDIT_TAB}'!A1`,
+    });
+  } catch {
+    // Tab doesn't exist — create it with headers
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [{ addSheet: { properties: { title: AUDIT_TAB } } }],
+      },
+    });
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `'${AUDIT_TAB}'!A1:E1`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values: [["Timestamp", "Admin", "Action", "Target Row", "Details"]],
+      },
+    });
+  }
+
+  const timestamp = new Date().toLocaleString();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: `'${AUDIT_TAB}'!A:E`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [[timestamp, admin || "System", action, targetRow || "", details || ""]],
+    },
+  });
+}
+
+/**
+ * Read all audit log entries.
+ */
+export async function getAuditLog() {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `'${AUDIT_TAB}'!A:E`,
+    });
+    const rows = response.data.values;
+    if (!rows || rows.length <= 1) return [];
+    return rows.slice(1).map((row) => ({
+      timestamp: row[0] || "",
+      admin: row[1] || "",
+      action: row[2] || "",
+      targetRow: row[3] || "",
+      details: row[4] || "",
+    }));
+  } catch {
+    return [];
+  }
+}

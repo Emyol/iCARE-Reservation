@@ -7,17 +7,20 @@ import TimelineChart from "@/components/TimelineChart";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import BookingModal from "@/components/BookingModal";
 import EmailModal from "@/components/EmailModal";
+import ReservationDetailModal from "@/components/ReservationDetailModal";
 
 export default function DashboardPage() {
   const { isAdmin, adminInfo, login, logout } = useAdmin();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [emailTarget, setEmailTarget] = useState(null);
+  const [selectedReservation, setSelectedReservation] = useState(null);
 
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [view, setView] = useState("day"); // "day" | "week"
   const [showNotifications, setShowNotifications] = useState(false);
@@ -52,11 +55,24 @@ export default function DashboardPage() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Search filter
+  const searchLower = searchQuery.toLowerCase().trim();
+  const matchesSearch = (r) => {
+    if (!searchLower) return true;
+    return (
+      (r.eventName && r.eventName.toLowerCase().includes(searchLower)) ||
+      (r.room && r.room.toLowerCase().includes(searchLower)) ||
+      (r.fullName && r.fullName.toLowerCase().includes(searchLower))
+    );
+  };
+
+  const filteredReservations = reservations.filter(matchesSearch);
+
   // All-time splits (for Quick Stats)
-  const avrData = reservations.filter(
+  const avrData = filteredReservations.filter(
     (r) => r.room && r.room.toLowerCase().includes("audio-visual"),
   );
-  const studyAreaData = reservations.filter(
+  const studyAreaData = filteredReservations.filter(
     (r) => r.room && !r.room.toLowerCase().includes("audio-visual"),
   );
 
@@ -81,7 +97,7 @@ export default function DashboardPage() {
     return { start: mon, end: sun };
   }
   const { start: weekStart, end: weekEnd } = getWeekRange();
-  const weekData = reservations.filter((r) => {
+  const weekData = filteredReservations.filter((r) => {
     const d = new Date(r.startTime);
     return d >= weekStart && d < weekEnd;
   });
@@ -109,7 +125,7 @@ export default function DashboardPage() {
     fetchReservations();
   }
 
-  const totalBookings = reservations.length;
+  const totalBookings = filteredReservations.length;
   const avrBookings = avrData.length;
   const studyBookings = studyAreaData.length;
 
@@ -139,10 +155,20 @@ export default function DashboardPage() {
                 search
               </span>
               <input
-                className="w-full pl-10 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/40 focus:outline-none"
+                className="w-full pl-10 pr-8 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/40 focus:outline-none transition-colors"
                 placeholder="Search rooms, staff..."
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -305,6 +331,20 @@ export default function DashboardPage() {
           {/* Day view — Gantt charts */}
           {view === "day" && (
             <>
+              {searchQuery && avrTodayData.length === 0 && studyTodayData.length === 0 && !loading && (
+                <div className="glass-panel p-12 text-center">
+                  <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">search_off</span>
+                  <p className="text-slate-500 text-sm font-medium">
+                    No reservations found for &ldquo;{searchQuery}&rdquo;
+                  </p>
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="mt-3 text-xs text-teal-400 hover:text-teal-300 transition-colors"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              )}
               <TimelineChart
                 title="Audio-Visual Room Schedule"
                 icon="videocam"
@@ -312,6 +352,7 @@ export default function DashboardPage() {
                 data={avrTodayData}
                 accentColor="emerald"
                 loading={loading}
+                onEventClick={setSelectedReservation}
               />
               <TimelineChart
                 title="Individual Training Room Schedule"
@@ -324,6 +365,7 @@ export default function DashboardPage() {
                   { color: "bg-amber-500", label: "Reserved Area" },
                 ]}
                 loading={loading}
+                onEventClick={setSelectedReservation}
               />
             </>
           )}
@@ -359,11 +401,21 @@ export default function DashboardPage() {
               ) : weekDays.length === 0 ? (
                 <div className="glass-panel p-12 text-center">
                   <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">
-                    event_available
+                    {searchQuery ? "search_off" : "event_available"}
                   </span>
                   <p className="text-slate-500 text-sm font-medium">
-                    No reservations this week
+                    {searchQuery
+                      ? `No reservations found for "${searchQuery}"`
+                      : "No reservations this week"}
                   </p>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="mt-3 text-xs text-teal-400 hover:text-teal-300 transition-colors"
+                    >
+                      Clear search
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -394,10 +446,11 @@ export default function DashboardPage() {
                             return (
                               <div
                                 key={i}
-                                className={`glass-panel/60 rounded-xl border p-4 flex items-center gap-4 ${
+                                onClick={() => setSelectedReservation(r)}
+                                className={`glass-panel/60 rounded-xl border p-4 flex items-center gap-4 cursor-pointer transition-all hover:scale-[1.01] ${
                                   isAVR
-                                    ? "border-emerald-500/20"
-                                    : "border-blue-500/20"
+                                    ? "border-emerald-500/20 hover:border-emerald-500/40"
+                                    : "border-blue-500/20 hover:border-blue-500/40"
                                 }`}
                               >
                                 <div
@@ -442,7 +495,10 @@ export default function DashboardPage() {
                                   </div>
                                   {isAdmin && (
                                     <button
-                                      onClick={() => setEmailTarget(r)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEmailTarget(r);
+                                      }}
                                       className={`size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                                         r.emailSent
                                           ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
@@ -544,6 +600,17 @@ export default function DashboardPage() {
           reservation={emailTarget}
           onClose={() => setEmailTarget(null)}
           onSent={() => {
+            fetchReservations();
+          }}
+        />
+      )}
+      {selectedReservation && (
+        <ReservationDetailModal
+          reservation={selectedReservation}
+          onClose={() => setSelectedReservation(null)}
+          onUpdate={() => {
+            setSelectedReservation(null);
+            setLoading(true);
             fetchReservations();
           }}
         />

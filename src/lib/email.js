@@ -182,6 +182,7 @@ function buildConflictHtml({
   conflictStart,
   conflictEnd,
   conflictEvent,
+  conflictSubmittedOn,
   adminName,
 }) {
   return emailWrapper(`
@@ -234,6 +235,18 @@ function buildConflictHtml({
             </td>
           </tr>
         </table>
+
+        ${
+          conflictSubmittedOn
+            ? `
+        <div style="background:#312e81;border-left:4px solid #818cf8;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+          <p style="margin:0;color:#c7d2fe;font-size:13px;line-height:1.6;">
+            <strong style="color:#a5b4fc;">📋 Priority Notice:</strong> The existing reservation was submitted on <strong>${conflictSubmittedOn}</strong> and has scheduling priority. Your reservation may need to be rescheduled.
+          </p>
+        </div>
+        `
+            : ""
+        }
 
         <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0;">
           Please choose a different time slot or contact the iCARE administration to resolve this conflict.
@@ -309,6 +322,7 @@ export async function sendConflictEmail({
     conflictStart: formatTimeForEmail(conflictingReservation.startTime),
     conflictEnd: formatTimeForEmail(conflictingReservation.endTime),
     conflictEvent: conflictingReservation.eventName,
+    conflictSubmittedOn: conflictingReservation.timestamp || null,
     adminName: admin.name,
   });
 
