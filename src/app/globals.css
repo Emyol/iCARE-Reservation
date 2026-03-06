@@ -2,9 +2,21 @@
 
 @theme inline {
   --color-primary: #9d4edd;
+  --color-primary-foreground: #ffffff;
   --color-secondary: #00f5d4;
+  --color-secondary-foreground: #0b0714;
   --color-accent: #7b2cbf;
+  --color-accent-foreground: #e2e8f0;
+  --color-background: #0b0714;
   --color-background-dark: #0f0c1b;
+  --color-foreground: #e2e8f0;
+  --color-muted: #1a1529;
+  --color-muted-foreground: #94a3b8;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-input: rgba(255, 255, 255, 0.12);
+  --color-ring: #9d4edd;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
   --color-glass-bg: rgba(25, 20, 40, 0.4);
   --color-glass-border: rgba(255, 255, 255, 0.08);
   --color-glass-highlight: rgba(255, 255, 255, 0.12);

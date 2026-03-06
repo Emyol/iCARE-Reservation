@@ -25,6 +25,35 @@ const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
 const SHEET_TAB = "Venue Reservation";
 
+/**
+ * Get the numeric sheetId for a tab by its title.
+ * Needed for batchUpdate requests (insertDimension, etc.).
+ */
+async function getSheetId(tabName = SHEET_TAB) {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheet = meta.data.sheets.find((s) => s.properties.title === tabName);
+  if (!sheet) throw new Error(`Sheet tab "${tabName}" not found`);
+  return sheet.properties.sheetId;
+}
+
+/**
+ * Find the last row with data in columns A:Q of the given tab.
+ * Returns the 1-based row number of the last occupied row.
+ */
+async function getLastDataRow(tabName = SHEET_TAB) {
+  const sheets = getSheets();
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${tabName}'!A:Q`,
+  });
+  const rows = response.data.values;
+  // rows includes header; if empty sheet, header only → length 1
+  return rows ? rows.length : 1;
+}
+
 // Column indices (0-based)
 const COL = {
   CONFIRMATION_EMAIL: 0,
@@ -164,7 +193,8 @@ export async function getReservations() {
       const endTimeStr = row[COL.END_TIME] || "";
       const fullName = row[COL.FULL_NAME] || "";
       const timestamp = row[COL.TIMESTAMP] || "";
-      const emailSent = (row[COL.CONFIRMATION_EMAIL] || "").toUpperCase() === "TRUE";
+      const emailSent =
+        (row[COL.CONFIRMATION_EMAIL] || "").toUpperCase() === "TRUE";
       // Use FEU Tech Email (col M) first, then Email Address (col D)
       const recipientEmail = row[COL.FEU_EMAIL] || row[COL.EMAIL] || "";
 
@@ -248,7 +278,9 @@ export async function appendReservation({
     return `${h}:${m} ${period}`;
   };
 
-  const timestamp = new Date().toLocaleString();
+  const timestamp = new Date().toLocaleString("en-US", {
+    timeZone: "Asia/Manila",
+  });
 
   // Build row matching the 17-column schema (A:Q)
   // A: Confirmation Email (sent status) → empty (admin booking)
@@ -288,9 +320,36 @@ export async function appendReservation({
     "Manual booking via iCARE Dashboard", // Q: Additional Notes
   ];
 
-  await sheets.spreadsheets.values.append({
+  // Insert a new row right after the last data row (pushes pivot table down)
+  // then write data into that row. This avoids the append issue where
+  // Google Sheets writes after the pivot table instead of after the data.
+  const lastRow = await getLastDataRow(SHEET_TAB);
+  const insertAtRow = lastRow; // 0-indexed for insertDimension
+  const sheetId = await getSheetId(SHEET_TAB);
+
+  await sheets.spreadsheets.batchUpdate({
     spreadsheetId,
-    range: `'${SHEET_TAB}'!A:Q`,
+    requestBody: {
+      requests: [
+        {
+          insertDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              startIndex: insertAtRow,
+              endIndex: insertAtRow + 1,
+            },
+            inheritFromBefore: true,
+          },
+        },
+      ],
+    },
+  });
+
+  const newRowNumber = insertAtRow + 1; // 1-based for A1 notation
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${SHEET_TAB}'!A${newRowNumber}:Q${newRowNumber}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [newRow],
@@ -323,7 +382,13 @@ export async function updateEmailStatus(rowIndex, emailNote = "") {
     range: `'${SHEET_TAB}'!A${rowIndex}:B${rowIndex}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [["TRUE", emailNote || `Sent via iCARE on ${new Date().toLocaleString()}`]],
+      values: [
+        [
+          "TRUE",
+          emailNote ||
+            `Sent via iCARE on ${new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })}`,
+        ],
+      ],
     },
   });
 }
@@ -456,13 +521,17 @@ export async function appendAuditLog({ action, admin, details, targetRow }) {
     });
   }
 
-  const timestamp = new Date().toLocaleString();
+  const timestamp = new Date().toLocaleString("en-US", {
+    timeZone: "Asia/Manila",
+  });
   await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: `'${AUDIT_TAB}'!A:E`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [[timestamp, admin || "System", action, targetRow || "", details || ""]],
+      values: [
+        [timestamp, admin || "System", action, targetRow || "", details || ""],
+      ],
     },
   });
 }

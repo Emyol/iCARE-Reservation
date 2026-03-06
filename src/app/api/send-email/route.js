@@ -107,8 +107,8 @@ export async function POST(request) {
       try {
         const note =
           type === "conflict"
-            ? `Conflict notice sent by ${admin.name} on ${new Date().toLocaleString()}`
-            : `Confirmation sent by ${admin.name} on ${new Date().toLocaleString()}`;
+            ? `Conflict notice sent by ${admin.name} on ${new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })}`
+            : `Confirmation sent by ${admin.name} on ${new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })}`;
         await updateEmailStatus(reservation.rowIndex, note);
       } catch (err) {
         console.error("Failed to update email status in sheet:", err.message);

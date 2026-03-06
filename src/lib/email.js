@@ -128,12 +128,12 @@ function buildConfirmationHtml({
       <td style="padding:32px;">
         <div style="background:#065f46;border-left:4px solid #10b981;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
           <p style="margin:0;color:#6ee7b7;font-size:15px;font-weight:700;">✅ Reservation Confirmed</p>
-          <p style="margin:6px 0 0;color:#a7f3d0;font-size:13px;">Your room reservation has been approved and scheduled.</p>
+          <p style="margin:6px 0 0;color:#a7f3d0;font-size:13px;">Your iCARE‑ERC Venue Reservation has been confirmed.</p>
         </div>
 
         <p style="color:#e2e8f0;font-size:14px;margin:0 0 20px;">Dear <strong>${fullName || "Reservant"}</strong>,</p>
         <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;line-height:1.6;">
-          We are pleased to confirm your room reservation. Below are the details:
+          This is to confirm your iCARE‑ERC Venue Reservation request. Please find the details of your reservation below:
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:24px;">
@@ -145,12 +145,6 @@ function buildConfirmationHtml({
           </tr>
           <tr>
             <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-              <p style="margin:0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Purpose / Event</p>
-              <p style="margin:4px 0 0;color:#f1f5f9;font-size:14px;font-weight:600;">${eventName}</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
               <p style="margin:0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Date</p>
               <p style="margin:4px 0 0;color:#f1f5f9;font-size:14px;font-weight:600;">${date}</p>
             </td>
@@ -158,15 +152,23 @@ function buildConfirmationHtml({
           <tr>
             <td style="padding:16px 20px;">
               <p style="margin:0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Time</p>
-              <p style="margin:4px 0 0;color:#f1f5f9;font-size:14px;font-weight:600;">${startTime} — ${endTime}</p>
+              <p style="margin:4px 0 0;color:#f1f5f9;font-size:14px;font-weight:600;">${startTime} to ${endTime}</p>
             </td>
           </tr>
         </table>
 
-        <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0;">
-          If you need to make changes or cancel, please contact the iCARE administration.
+        <p style="color:#94a3b8;font-size:13px;line-height:1.7;margin:0 0 16px;">
+          Kindly ensure that the room is used responsibly and in accordance with iCARE's guidelines
+          (<a href="https://bit.ly/ResponsibleUseofiCARERooms" style="color:#6ee7b7;text-decoration:underline;">https://bit.ly/ResponsibleUseofiCARERooms</a>).
         </p>
-        <p style="color:#64748b;font-size:12px;margin:16px 0 0;">— ${adminName || "iCARE Administration"}</p>
+        <p style="color:#94a3b8;font-size:13px;line-height:1.7;margin:0 0 16px;">
+          Should there be any changes to your schedule or reservation, please inform us at
+          <a href="mailto:icarevo@feutech.edu.ph" style="color:#6ee7b7;text-decoration:underline;">icarevo@feutech.edu.ph</a>.
+        </p>
+        <p style="color:#94a3b8;font-size:13px;line-height:1.7;margin:0 0 24px;">
+          Thank you, and we look forward to your productive session!
+        </p>
+        <p style="color:#64748b;font-size:12px;margin:0;">— iCARE‑ERC Team</p>
       </td>
     </tr>
   `);
@@ -189,17 +191,20 @@ function buildConflictHtml({
     <tr>
       <td style="padding:32px;">
         <div style="background:#78350f;border-left:4px solid #f59e0b;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
-          <p style="margin:0;color:#fcd34d;font-size:15px;font-weight:700;">⚠️ Schedule Conflict Detected</p>
-          <p style="margin:6px 0 0;color:#fde68a;font-size:13px;">Your requested time slot overlaps with an existing reservation.</p>
+          <p style="margin:0;color:#fcd34d;font-size:15px;font-weight:700;">⚠️ Room Not Available</p>
+          <p style="margin:6px 0 0;color:#fde68a;font-size:13px;">Your requested time slot has already been reserved by another student.</p>
         </div>
 
         <p style="color:#e2e8f0;font-size:14px;margin:0 0 20px;">Dear <strong>${fullName || "Reservant"}</strong>,</p>
-        <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;line-height:1.6;">
-          We noticed that your reservation request conflicts with an existing booking. Please review the details below:
+        <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;line-height:1.7;">
+          Thank you for your iCARE‑ERC Venue Reservation request.
+        </p>
+        <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;line-height:1.7;">
+          Unfortunately, the <strong style="color:#f1f5f9;">${room}</strong> has already been reserved by another student during your desired timeslot on <strong style="color:#f1f5f9;">${date}</strong>, from <strong style="color:#f1f5f9;">${conflictStart} to ${conflictEnd}</strong>. We sincerely apologize for the inconvenience this may cause.
         </p>
 
         <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;font-weight:700;">Your Requested Reservation</p>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:20px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:24px;">
           <tr>
             <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
               <p style="margin:0;color:#64748b;font-size:11px;">Room</p>
@@ -208,30 +213,14 @@ function buildConflictHtml({
           </tr>
           <tr>
             <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-              <p style="margin:0;color:#64748b;font-size:11px;">Purpose / Event</p>
-              <p style="margin:4px 0 0;color:#f1f5f9;font-size:14px;font-weight:600;">${eventName}</p>
+              <p style="margin:0;color:#64748b;font-size:11px;">Date</p>
+              <p style="margin:4px 0 0;color:#f1f5f9;font-size:14px;font-weight:600;">${date}</p>
             </td>
           </tr>
           <tr>
             <td style="padding:14px 20px;">
               <p style="margin:0;color:#64748b;font-size:11px;">Requested Time</p>
-              <p style="margin:4px 0 0;color:#f1f5f9;font-size:14px;font-weight:600;">${date} · ${startTime} — ${endTime}</p>
-            </td>
-          </tr>
-        </table>
-
-        <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;font-weight:700;">Existing Reservation (Conflict)</p>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1c1917;border-radius:8px;border:1px solid #f59e0b33;margin-bottom:24px;">
-          <tr>
-            <td style="padding:14px 20px;border-bottom:1px solid rgba(245,158,11,0.15);">
-              <p style="margin:0;color:#92400e;font-size:11px;">Event</p>
-              <p style="margin:4px 0 0;color:#fbbf24;font-size:14px;font-weight:600;">${conflictEvent || "Reserved"}</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:14px 20px;">
-              <p style="margin:0;color:#92400e;font-size:11px;">Booked Time</p>
-              <p style="margin:4px 0 0;color:#fbbf24;font-size:14px;font-weight:600;">${conflictStart} — ${conflictEnd}</p>
+              <p style="margin:4px 0 0;color:#f1f5f9;font-size:14px;font-weight:600;">${startTime} to ${endTime}</p>
             </td>
           </tr>
         </table>
@@ -241,17 +230,23 @@ function buildConflictHtml({
             ? `
         <div style="background:#312e81;border-left:4px solid #818cf8;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
           <p style="margin:0;color:#c7d2fe;font-size:13px;line-height:1.6;">
-            <strong style="color:#a5b4fc;">📋 Priority Notice:</strong> The existing reservation was submitted on <strong>${conflictSubmittedOn}</strong> and has scheduling priority. Your reservation may need to be rescheduled.
+            <strong style="color:#a5b4fc;">📋 Priority Notice:</strong> The existing reservation was submitted on <strong>${conflictSubmittedOn}</strong> and has scheduling priority.
           </p>
         </div>
         `
             : ""
         }
 
-        <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0;">
-          Please choose a different time slot or contact the iCARE administration to resolve this conflict.
+        <p style="color:#94a3b8;font-size:13px;line-height:1.7;margin:0 0 16px;">
+          If you would like to choose a different time or reserve another available room, please feel free to reach out to us at
+          <a href="mailto:icarevo@feutech.edu.ph" style="color:#fcd34d;text-decoration:underline;">icarevo@feutech.edu.ph</a>.
+          You may also review our room use guidelines here:
+          <a href="https://bit.ly/ResponsibleUseofiCARERooms" style="color:#fcd34d;text-decoration:underline;">https://bit.ly/ResponsibleUseofiCARERooms</a>.
         </p>
-        <p style="color:#64748b;font-size:12px;margin:16px 0 0;">— ${adminName || "iCARE Administration"}</p>
+        <p style="color:#94a3b8;font-size:13px;line-height:1.7;margin:0 0 24px;">
+          Thank you for your understanding, and we will be happy to assist you with alternative arrangements.
+        </p>
+        <p style="color:#64748b;font-size:12px;margin:0;">— iCARE‑ERC Team</p>
       </td>
     </tr>
   `);
@@ -287,7 +282,7 @@ export async function sendConfirmationEmail({ admin, reservation }) {
     from: `"iCARE Room Reservation" <${admin.email}>`,
     to: recipientEmail,
     cc: ccEmails.length > 0 ? ccEmails.join(", ") : undefined,
-    subject: `✅ Reservation Confirmed — ${room.split(" /")[0] || room}`,
+    subject: `iCARE Room Reservation Confirmation — ${room.split(" /")[0] || room}`,
     html,
   };
 
@@ -330,7 +325,7 @@ export async function sendConflictEmail({
     from: `"iCARE Room Reservation" <${admin.email}>`,
     to: recipientEmail,
     cc: ccEmails.length > 0 ? ccEmails.join(", ") : undefined,
-    subject: `⚠️ Schedule Conflict — ${room.split(" /")[0] || room}`,
+    subject: `iCARE Room Reservation — Room Not Available (${room.split(" /")[0] || room})`,
     html,
   };
 
