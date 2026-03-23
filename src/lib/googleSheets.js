@@ -358,6 +358,7 @@ export async function appendReservation({
 
   // Return timezone-free strings consistent with getReservations()
   return {
+    rowIndex: newRowNumber,
     timestamp,
     room,
     eventName,

@@ -15,7 +15,13 @@ const ROOM_OPTIONS = [
 
 export default function AvailabilityChecker({ reservations = [] }) {
   const [room, setRoom] = useState(ROOM_OPTIONS[0].value);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  });
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("09:00");
   const [checked, setChecked] = useState(false);
@@ -31,8 +37,8 @@ export default function AvailabilityChecker({ reservations = [] }) {
       if (r.room !== room) return false;
       const rStart = new Date(r.startTime);
       const rEnd = new Date(r.endTime);
-      // Check same date
-      const rDate = rStart.toISOString().slice(0, 10);
+      // Check same date using local date components to avoid UTC offset shifting the date
+      const rDate = `${rStart.getFullYear()}-${String(rStart.getMonth() + 1).padStart(2, "0")}-${String(rStart.getDate()).padStart(2, "0")}`;
       if (rDate !== date) return false;
       // Check overlap
       return queryStart < rEnd && queryEnd > rStart;

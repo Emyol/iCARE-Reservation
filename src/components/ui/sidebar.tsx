@@ -107,23 +107,21 @@ export const DesktopSidebar = ({
 export const MobileSidebar = ({
   className,
   children,
-  ...props
 }: React.ComponentProps<"div">) => {
   const { open, setOpen } = useSidebar();
   return (
     <>
       <div
-        className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-neutral-100 dark:bg-neutral-800 w-full",
-        )}
-        {...props}
+        className="h-14 px-4 flex flex-row md:hidden items-center justify-between bg-black/30 backdrop-blur-md border-b border-white/10 w-full shrink-0"
       >
-        <div className="flex justify-end z-20 w-full">
-          <Menu
-            className="text-neutral-800 dark:text-neutral-200 cursor-pointer"
-            onClick={() => setOpen(!open)}
-          />
-        </div>
+        <span className="font-bold text-sm tracking-wide">
+          <span className="text-white">iCARE</span>{" "}
+          <span className="text-purple-400">Reservation</span>
+        </span>
+        <Menu
+          className="text-slate-300 cursor-pointer"
+          onClick={() => setOpen(!open)}
+        />
         <AnimatePresence>
           {open && (
             <motion.div
@@ -135,12 +133,12 @@ export const MobileSidebar = ({
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-full w-full inset-0 bg-white dark:bg-neutral-900 p-10 z-[100] flex flex-col justify-between",
+                "fixed h-full w-full inset-0 bg-[#0b0714] p-8 z-[100] flex flex-col justify-between border-r border-white/10",
                 className,
               )}
             >
               <div
-                className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200 cursor-pointer"
+                className="absolute right-6 top-6 z-50 text-slate-400 hover:text-white cursor-pointer"
                 onClick={() => setOpen(!open)}
               >
                 <X />

@@ -22,7 +22,7 @@ export default function SchedulePage() {
 
   async function fetchData() {
     try {
-      const res = await fetch("/api/reservations");
+      const res = await fetch("/api/reservations", { cache: "no-store" });
       if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
       const data = await res.json();
       setReservations(data);
@@ -100,7 +100,7 @@ export default function SchedulePage() {
     });
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex flex-col md:flex-row min-h-screen">
       <Sidebar
         isAdmin={isAdmin}
         onLoginClick={() => setShowLoginModal(true)}

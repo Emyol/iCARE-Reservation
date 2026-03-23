@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import {
   Sidebar as AnimatedSidebar,
   SidebarBody,
-  SidebarLink,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -87,12 +86,13 @@ export default function Sidebar({ isAdmin, onLoginClick, onLogout }) {
 
 function SidebarNavLink({ href, label, icon }) {
   const pathname = usePathname();
-  const { open, animate } = useSidebar();
+  const { open, animate, setOpen } = useSidebar();
   const isActive = pathname === href;
 
   return (
     <Link
       href={href}
+      onClick={() => setOpen(false)}
       className={`flex items-center group/sidebar py-2.5 rounded-xl transition-all duration-300 relative overflow-hidden ${
         open ? "justify-start gap-2 px-3" : "justify-center px-0"
       } ${

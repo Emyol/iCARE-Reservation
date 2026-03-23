@@ -104,16 +104,15 @@ export default function LandingPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <h1 className="text-6xl md:text-7xl font-extrabold tracking-tight leading-tight mb-4">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight leading-tight mb-4">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 glow-text">
                 iCARE
               </span>{" "}
               Room Reservation
             </h1>
-            <p className="text-slate-300 text-xl mt-4 leading-relaxed max-w-2xl mx-auto">
+            <p className="text-slate-300 text-lg sm:text-xl mt-4 leading-relaxed max-w-2xl mx-auto">
               Real-time room scheduling for iTamaraw Center for Academic
-              Resources and Enrichment.
-              <br />
+              Resources and Enrichment.{" "}
               View, manage, and track AVR and Training Room bookings with ease.
             </p>
           </motion.div>
@@ -168,7 +167,7 @@ export default function LandingPage() {
                 href: "/reports",
                 color: "text-blue-400",
               },
-            ].map((f, i) => (
+            ].map((f) => (
               <motion.div
                 key={f.label}
                 whileHover={{ y: -5 }}

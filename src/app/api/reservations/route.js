@@ -4,6 +4,7 @@ import {
   getReservations,
   appendReservation,
   appendAuditLog,
+  updateEmailStatus,
 } from "@/lib/googleSheets";
 import {
   findAdmin,
@@ -19,11 +20,9 @@ import {
 export async function GET() {
   try {
     const reservations = await getReservations();
-    console.log("[DEBUG] Reservations fetched:", reservations.length, "rows");
-    if (reservations.length > 0) {
-      console.log("[DEBUG] First row sample:", JSON.stringify(reservations[0]));
-    }
-    return NextResponse.json(reservations);
+    const response = NextResponse.json(reservations);
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
   } catch (error) {
     console.error("[DEBUG] Error fetching reservations:", error.message);
     return NextResponse.json(
@@ -138,6 +137,17 @@ export async function POST(request) {
               reservation: reservationForEmail,
             });
             emailResult = { sent: true, type: "confirmation" };
+          }
+          // Update emailSent status in Google Sheet so the UI reflects correctly
+          if (reservation.rowIndex) {
+            try {
+              const emailType = conflictingReservation ? "Conflict notice" : "Confirmation";
+              const note = `${emailType} sent by ${admin.name || decoded.username} on ${new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })}`;
+              await updateEmailStatus(reservation.rowIndex, note);
+              reservation.emailSent = true;
+            } catch (updateErr) {
+              console.error("Email status update failed:", updateErr.message);
+            }
           }
         } catch (err) {
           console.error("Auto-email failed:", err.message);
