@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAdmin } from "@/components/AdminProvider";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import Sidebar from "@/components/Sidebar";
@@ -13,21 +13,24 @@ export default function ConflictsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/reservations", { cache: "no-store" });
-        if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-        const data = await res.json();
-        setReservations(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/reservations", { cache: "no-store" });
+      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
+      const data = await res.json();
+      setReservations(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   function handleLogin(adminInfo) {
     login(adminInfo);

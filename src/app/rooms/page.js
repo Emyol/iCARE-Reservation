@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAdmin } from "@/components/AdminProvider";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import AvailabilityChecker from "@/components/AvailabilityChecker";
@@ -60,17 +60,20 @@ export default function RoomsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [reservations, setReservations] = useState([]);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/reservations");
-        if (!res.ok) return;
-        const data = await res.json();
-        setReservations(data);
-      } catch {}
-    }
-    fetchData();
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/reservations", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setReservations(data);
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   function handleLogin(adminInfo) {
     login(adminInfo);

@@ -26,7 +26,9 @@ export async function GET(request) {
     }
 
     const logs = await getAuditLog();
-    return NextResponse.json(logs);
+    const response = NextResponse.json(logs);
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
   } catch (error) {
     console.error("Error fetching activity log:", error);
     return NextResponse.json(

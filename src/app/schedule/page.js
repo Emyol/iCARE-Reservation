@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { isSameDay } from "date-fns";
 import { useAdmin } from "@/components/AdminProvider";
 import AdminLoginModal from "@/components/AdminLoginModal";
@@ -20,7 +20,7 @@ export default function SchedulePage() {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/reservations", { cache: "no-store" });
       if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
@@ -31,11 +31,13 @@ export default function SchedulePage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+    const interval = setInterval(fetchData, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   // Transform reservations into calendar data format
   const calendarData = useMemo(() => {

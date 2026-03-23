@@ -44,6 +44,15 @@ export default function DashboardPage() {
     fetchReservations();
   }, [fetchReservations]);
 
+  // Auto-refresh every 30 seconds to pick up new Google Form submissions
+  // without requiring a manual page reload.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchReservations();
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchReservations]);
+
   // Close notification panel when clicking outside
   useEffect(() => {
     function handleClick(e) {
@@ -109,10 +118,22 @@ export default function DashboardPage() {
   }, {});
   const weekDays = Object.values(weekGrouped).sort((a, b) => a.date - b.date);
 
-  // Recent reservations for notification panel (latest 5 by startTime)
+  // Notification panel: 5 most recently SUBMITTED reservations (by timestamp).
+  // Sorting by startTime showed future-dated events first, not new submissions.
   const recentReservations = [...reservations]
-    .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
+    .sort((a, b) => {
+      const aTs = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const bTs = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return bTs - aTs;
+    })
     .slice(0, 5);
+
+  // Count submissions from the last 24 hours for the badge.
+  const newSubmissionsCount = reservations.filter((r) => {
+    if (!r.timestamp) return false;
+    const ts = new Date(r.timestamp);
+    return !isNaN(ts.getTime()) && Date.now() - ts.getTime() < 86_400_000;
+  }).length;
 
   function handleLogin(adminInfo) {
     login(adminInfo);
@@ -230,16 +251,18 @@ export default function DashboardPage() {
                   className="size-10 flex items-center justify-center text-slate-400 hover:bg-white/5 rounded-full transition-colors relative"
                 >
                   <span className="material-symbols-outlined">notifications</span>
-                  {recentReservations.length > 0 && (
-                    <span className="absolute top-2.5 right-2.5 size-2 bg-red-500 rounded-full pulse-dot" />
+                  {newSubmissionsCount > 0 && (
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center px-0.5">
+                      {newSubmissionsCount > 9 ? "9+" : newSubmissionsCount}
+                    </span>
                   )}
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute top-12 right-0 w-80 max-w-[calc(100vw-2rem)] glass-panel border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="absolute top-12 right-0 w-80 max-w-[calc(100vw-2rem)] bg-[#0f0c1b] border border-white/15 rounded-xl shadow-2xl z-50 overflow-hidden">
                   <div className="p-3 border-b border-white/5 flex items-center justify-between">
                     <span className="text-sm font-semibold text-slate-200">
-                      Recent Reservations
+                      Latest Submissions
                     </span>
                     <button
                       onClick={() => setShowNotifications(false)}

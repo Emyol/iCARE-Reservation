@@ -2,6 +2,12 @@ import { google } from "googleapis";
 
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
+// Module-level cache — survives across warm serverless invocations.
+// Cold starts reset these, which is fine; they simply re-fetch once.
+let _sheetsClient = null;
+let _cachedSheetId = null;        // numeric sheetId for the Venue Reservation tab
+let _auditTabVerified = false;    // true once Audit Log tab is confirmed to exist
+
 /**
  * Real Google Sheet schema (from Google Form):
  * A: Confirmation Email (TRUE/FALSE sent status)
@@ -27,15 +33,17 @@ const SHEET_TAB = "Venue Reservation";
 
 /**
  * Get the numeric sheetId for a tab by its title.
- * Needed for batchUpdate requests (insertDimension, etc.).
+ * Cached after the first successful lookup — the tab ID never changes.
  */
 async function getSheetId(tabName = SHEET_TAB) {
+  if (_cachedSheetId !== null) return _cachedSheetId;
   const sheets = getSheets();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
   const meta = await sheets.spreadsheets.get({ spreadsheetId });
   const sheet = meta.data.sheets.find((s) => s.properties.title === tabName);
   if (!sheet) throw new Error(`Sheet tab "${tabName}" not found`);
-  return sheet.properties.sheetId;
+  _cachedSheetId = sheet.properties.sheetId;
+  return _cachedSheetId;
 }
 
 /**
@@ -75,20 +83,18 @@ const COL = {
   NOTES: 16,
 };
 
-function getAuth() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    },
-    scopes: SCOPES,
-  });
-  return auth;
-}
-
 function getSheets() {
-  const auth = getAuth();
-  return google.sheets({ version: "v4", auth });
+  if (!_sheetsClient) {
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      },
+      scopes: SCOPES,
+    });
+    _sheetsClient = google.sheets({ version: "v4", auth });
+  }
+  return _sheetsClient;
 }
 
 /**
@@ -170,12 +176,6 @@ export async function getReservations() {
   });
 
   const rows = response.data.values;
-
-  console.log("[DEBUG] Raw rows from sheet:", rows ? rows.length : 0);
-  if (rows && rows.length > 1) {
-    console.log("[DEBUG] Header row:", JSON.stringify(rows[0]));
-    console.log("[DEBUG] First data row:", JSON.stringify(rows[1]));
-  }
 
   if (!rows || rows.length <= 1) {
     return [];
@@ -498,28 +498,32 @@ export async function appendAuditLog({ action, admin, details, targetRow }) {
   const sheets = getSheets();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-  // Ensure the Audit Log tab exists
-  try {
-    await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `'${AUDIT_TAB}'!A1`,
-    });
-  } catch {
-    // Tab doesn't exist — create it with headers
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId,
-      requestBody: {
-        requests: [{ addSheet: { properties: { title: AUDIT_TAB } } }],
-      },
-    });
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `'${AUDIT_TAB}'!A1:E1`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [["Timestamp", "Admin", "Action", "Target Row", "Details"]],
-      },
-    });
+  // Ensure the Audit Log tab exists — only check once per process lifetime.
+  if (!_auditTabVerified) {
+    try {
+      await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `'${AUDIT_TAB}'!A1`,
+      });
+      _auditTabVerified = true;
+    } catch {
+      // Tab doesn't exist — create it with headers
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [{ addSheet: { properties: { title: AUDIT_TAB } } }],
+        },
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `'${AUDIT_TAB}'!A1:E1`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [["Timestamp", "Admin", "Action", "Target Row", "Details"]],
+        },
+      });
+      _auditTabVerified = true;
+    }
   }
 
   const timestamp = new Date().toLocaleString("en-US", {
