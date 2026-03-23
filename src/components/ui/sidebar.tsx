@@ -111,9 +111,8 @@ export const MobileSidebar = ({
   const { open, setOpen } = useSidebar();
   return (
     <>
-      <div
-        className="h-14 px-4 flex flex-row md:hidden items-center justify-between bg-black/30 backdrop-blur-md border-b border-white/10 w-full shrink-0"
-      >
+      {/* Mobile top navigation bar */}
+      <div className="h-14 px-4 flex flex-row md:hidden items-center justify-between bg-black/30 backdrop-blur-md border-b border-white/10 w-full shrink-0">
         <span className="font-bold text-sm tracking-wide">
           <span className="text-white">iCARE</span>{" "}
           <span className="text-purple-400">Reservation</span>
@@ -122,32 +121,38 @@ export const MobileSidebar = ({
           className="text-slate-300 cursor-pointer"
           onClick={() => setOpen(!open)}
         />
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ x: "-100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-100%", opacity: 0 }}
-              transition={{
-                duration: 0.3,
-                ease: "easeInOut",
-              }}
-              className={cn(
-                "fixed h-full w-full inset-0 bg-[#0b0714] p-8 z-[100] flex flex-col justify-between border-r border-white/10",
-                className,
-              )}
-            >
-              <div
-                className="absolute right-6 top-6 z-50 text-slate-400 hover:text-white cursor-pointer"
-                onClick={() => setOpen(!open)}
-              >
-                <X />
-              </div>
-              {children}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* Full-screen drawer — sibling of top bar so it is NOT trapped inside
+          the top bar's backdrop-filter stacking context */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ x: "-100%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "-100%", opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className={cn(
+              "fixed inset-0 p-8 z-[200] flex flex-col justify-between md:hidden",
+              className,
+            )}
+            style={{
+              background: "#0b0714",
+              borderRadius: 0,
+              backdropFilter: "none",
+              WebkitBackdropFilter: "none",
+            }}
+          >
+            <div
+              className="absolute right-6 top-6 z-50 text-slate-400 hover:text-white cursor-pointer"
+              onClick={() => setOpen(false)}
+            >
+              <X />
+            </div>
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
