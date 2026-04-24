@@ -42,9 +42,6 @@ export default function BookingModal({ onClose, onBooked }) {
     const end = new Date(endTime);
     if (end <= start) return "End time must be after start time";
 
-    const durationHours = (end - start) / (1000 * 60 * 60);
-    if (durationHours > 4) return "Duration cannot exceed 4 hours";
-
     return null;
   }
 
@@ -336,7 +333,7 @@ export default function BookingModal({ onClose, onBooked }) {
                 </span>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Booking this room will automatically update the schedule
-                  dashboard. Please ensure the duration does not exceed 4 hours.
+                  dashboard.
                 </p>
               </div>
 
