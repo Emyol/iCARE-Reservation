@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAdmin } from "@/components/AdminProvider";
 
 const ROOM_OPTIONS = [
@@ -48,6 +48,15 @@ export default function ReservationDetailModal({
     });
 
   const isAVR = reservation.room?.toLowerCase().includes("audio-visual");
+  const availableRoomOptions = useMemo(() => {
+    const currentRoom = reservation.room?.trim();
+    if (!currentRoom) return ROOM_OPTIONS;
+
+    const hasCurrent = ROOM_OPTIONS.some((opt) => opt.value === currentRoom);
+    if (hasCurrent) return ROOM_OPTIONS;
+
+    return [{ value: currentRoom, label: currentRoom }, ...ROOM_OPTIONS];
+  }, [reservation.room]);
 
   async function handleSave() {
     setSaving(true);
@@ -215,7 +224,7 @@ export default function ReservationDetailModal({
                   }
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
                 >
-                  {ROOM_OPTIONS.map((r) => (
+                  {availableRoomOptions.map((r) => (
                     <option key={r.value} value={r.value}>
                       {r.label}
                     </option>

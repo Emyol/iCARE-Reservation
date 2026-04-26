@@ -26,10 +26,10 @@ let _auditTabVerified = false;    // true once Audit Log tab is confirmed to exi
  * N: Department/Office
  * O: Role/Designation
  * P: Will you need assistance with the room setup or equipment?
- * Q: Additional Notes or Requests
  */
 
 const SHEET_TAB = "Venue Reservation";
+const LAST_SHEET_COLUMN = "P";
 
 /**
  * Get the numeric sheetId for a tab by its title.
@@ -47,19 +47,37 @@ async function getSheetId(tabName = SHEET_TAB) {
 }
 
 /**
- * Find the last row with data in columns A:Q of the given tab.
- * Returns the 1-based row number of the last occupied row.
+ * Find the last reservation row using reservation-signature columns (F:P).
+ * Returns the 1-based row number. If no data rows exist, returns 1 (header row).
  */
 async function getLastDataRow(tabName = SHEET_TAB) {
   const sheets = getSheets();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `'${tabName}'!A:Q`,
+    range: `'${tabName}'!F2:${LAST_SHEET_COLUMN}`,
   });
-  const rows = response.data.values;
-  // rows includes header; if empty sheet, header only → length 1
-  return rows ? rows.length : 1;
+
+  const rows = response.data.values || [];
+
+  // Rows here are offset to sheet row 2. We treat a row as a reservation row
+  // when core scheduling fields are present.
+  const isReservationRow = (row = []) => {
+    const room = (row[0] || "").trim(); // F
+    const date = (row[2] || "").trim(); // H
+    const startTime = (row[3] || "").trim(); // I
+    const endTime = (row[4] || "").trim(); // J
+    return !!(room && date && startTime && endTime);
+  };
+
+  let lastReservationRow = 1;
+  for (let idx = 0; idx < rows.length; idx++) {
+    if (isReservationRow(rows[idx])) {
+      lastReservationRow = idx + 2;
+    }
+  }
+
+  return lastReservationRow;
 }
 
 // Column indices (0-based)
@@ -80,7 +98,6 @@ const COL = {
   DEPARTMENT: 13,
   ROLE: 14,
   EQUIPMENT: 15,
-  NOTES: 16,
 };
 
 function getSheets() {
@@ -172,7 +189,7 @@ export async function getReservations() {
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `'${SHEET_TAB}'!A:Q`,
+    range: `'${SHEET_TAB}'!A:${LAST_SHEET_COLUMN}`,
   });
 
   const rows = response.data.values;
@@ -282,7 +299,7 @@ export async function appendReservation({
     timeZone: "Asia/Manila",
   });
 
-  // Build row matching the 17-column schema (A:Q)
+  // Build row matching the 16-column schema (A:P)
   // A: Confirmation Email (sent status) → empty (admin booking)
   // B: Confirmation Email (body text)   → empty (admin booking)
   // C: Timestamp           → current time
@@ -299,7 +316,6 @@ export async function appendReservation({
   // N: Department          → "Administration"
   // O: Role                → "Administrator"
   // P: Equipment           → empty
-  // Q: Notes               → "Manual booking via iCARE Dashboard"
   const newRow = [
     "", // A: Confirmation Email (status)
     "", // B: Confirmation Email (body)
@@ -317,7 +333,6 @@ export async function appendReservation({
     "Administration", // N: Department/Office
     "Administrator", // O: Role/Designation
     "", // P: Equipment assistance
-    "Manual booking via iCARE Dashboard", // Q: Additional Notes
   ];
 
   // Insert a new row right after the last data row (pushes pivot table down)
@@ -349,7 +364,7 @@ export async function appendReservation({
   const newRowNumber = insertAtRow + 1; // 1-based for A1 notation
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `'${SHEET_TAB}'!A${newRowNumber}:Q${newRowNumber}`,
+    range: `'${SHEET_TAB}'!A${newRowNumber}:${LAST_SHEET_COLUMN}${newRowNumber}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [newRow],
@@ -395,7 +410,7 @@ export async function updateEmailStatus(rowIndex, emailNote = "") {
 }
 
 /**
- * Update a reservation row in-place (columns F–Q).
+ * Update a reservation row in-place.
  * Only provided fields are updated; others are preserved.
  */
 export async function updateReservation(rowIndex, fields) {
@@ -405,9 +420,9 @@ export async function updateReservation(rowIndex, fields) {
   // Fetch current row to preserve unchanged columns
   const current = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `'${SHEET_TAB}'!A${rowIndex}:Q${rowIndex}`,
+    range: `'${SHEET_TAB}'!A${rowIndex}:${LAST_SHEET_COLUMN}${rowIndex}`,
   });
-  const row = current.data.values?.[0] || new Array(17).fill("");
+  const row = current.data.values?.[0] || new Array(16).fill("");
 
   // Helper for date/time formatting
   const pad2 = (n) => n.toString().padStart(2, "0");
@@ -462,7 +477,7 @@ export async function updateReservation(rowIndex, fields) {
 
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `'${SHEET_TAB}'!A${rowIndex}:Q${rowIndex}`,
+    range: `'${SHEET_TAB}'!A${rowIndex}:${LAST_SHEET_COLUMN}${rowIndex}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [row],
@@ -477,10 +492,10 @@ export async function deleteReservation(rowIndex) {
   const sheets = getSheets();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-  const emptyRow = new Array(17).fill("");
+  const emptyRow = new Array(16).fill("");
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `'${SHEET_TAB}'!A${rowIndex}:Q${rowIndex}`,
+    range: `'${SHEET_TAB}'!A${rowIndex}:${LAST_SHEET_COLUMN}${rowIndex}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [emptyRow],

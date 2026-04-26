@@ -9,6 +9,10 @@ import BookingModal from "@/components/BookingModal";
 import EmailModal from "@/components/EmailModal";
 import ReservationDetailModal from "@/components/ReservationDetailModal";
 
+const ROOM_AVR = "Audio-Visual Room / Enhancement Area (Capacity: 40)";
+const ROOM_TRAINING =
+  "Individual Training / Small Group Discussion Room (Capacity: 10)";
+
 export default function DashboardPage() {
   const { isAdmin, adminInfo, login, logout } = useAdmin();
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -77,12 +81,15 @@ export default function DashboardPage() {
 
   const filteredReservations = reservations.filter(matchesSearch);
 
+  const isAvrRoom = (room) => (room || "").trim() === ROOM_AVR;
+  const isTrainingRoom = (room) => (room || "").trim() === ROOM_TRAINING;
+
   // All-time splits (for Quick Stats)
   const avrData = filteredReservations.filter(
-    (r) => r.room && r.room.toLowerCase().includes("audio-visual"),
+    (r) => isAvrRoom(r.room),
   );
   const studyAreaData = filteredReservations.filter(
-    (r) => r.room && !r.room.toLowerCase().includes("audio-visual"),
+    (r) => isTrainingRoom(r.room),
   );
 
   // Today-only (Day view)
@@ -280,9 +287,7 @@ export default function DashboardPage() {
                       </p>
                     ) : (
                       recentReservations.map((r, i) => {
-                        const isAVR = r.room
-                          .toLowerCase()
-                          .includes("audio-visual");
+                        const isAVR = isAvrRoom(r.room);
                         return (
                           <div key={i} className="p-3 flex items-start gap-3">
                             <div
@@ -418,7 +423,7 @@ export default function DashboardPage() {
                 </div>
               )}
               <TimelineChart
-                title="Audio-Visual Room Schedule"
+                title="Audio-Visual Room / Enhancement Area (Capacity: 40)"
                 icon="videocam"
                 iconColor="text-emerald-500"
                 data={avrTodayData}
@@ -427,14 +432,17 @@ export default function DashboardPage() {
                 onEventClick={setSelectedReservation}
               />
               <TimelineChart
-                title="Individual Training Room Schedule"
+                title="Individual Training / Small Group Discussion Room (Capacity: 10)"
                 icon="auto_stories"
                 iconColor="text-amber-500"
                 data={studyTodayData}
                 accentColor="blue"
                 legend={[
-                  { color: "bg-blue-500", label: "Group Study" },
-                  { color: "bg-amber-500", label: "Reserved Area" },
+                  {
+                    color: "bg-blue-500",
+                    label:
+                      "Individual Training / Small Group Discussion Room (Capacity: 10)",
+                  },
                 ]}
                 loading={loading}
                 onEventClick={setSelectedReservation}
@@ -512,9 +520,7 @@ export default function DashboardPage() {
                               new Date(a.startTime) - new Date(b.startTime),
                           )
                           .map((r, i) => {
-                            const isAVR = r.room
-                              .toLowerCase()
-                              .includes("audio-visual");
+                            const isAVR = isAvrRoom(r.room);
                             return (
                               <div
                                 key={i}
@@ -626,7 +632,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-2xl font-bold">{avrBookings}</p>
                 <p className="text-xs text-slate-500 font-medium">
-                  Audio-Visual Bookings
+                  Audio-Visual Room / Enhancement Area (Capacity: 40)
                 </p>
               </div>
             </div>
@@ -640,7 +646,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-2xl font-bold">{studyBookings}</p>
                 <p className="text-xs text-slate-500 font-medium">
-                  Individual Training Bookings
+                  Individual Training / Small Group Discussion Room (Capacity: 10)
                 </p>
               </div>
             </div>

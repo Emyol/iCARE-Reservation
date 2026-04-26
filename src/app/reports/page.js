@@ -6,6 +6,10 @@ import AdminLoginModal from "@/components/AdminLoginModal";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 
+const ROOM_AVR = "Audio-Visual Room / Enhancement Area (Capacity: 40)";
+const ROOM_TRAINING =
+  "Individual Training / Small Group Discussion Room (Capacity: 10)";
+
 export default function ReportsPage() {
   const { isAdmin, login, logout } = useAdmin();
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -33,10 +37,10 @@ export default function ReportsPage() {
   }, [fetchData]);
 
   const total = reservations.length;
-  const avrCount = reservations.filter((r) =>
-    r.room.toLowerCase().includes("audio-visual"),
+  const avrCount = reservations.filter((r) => (r.room || "").trim() === ROOM_AVR).length;
+  const trainingCount = reservations.filter(
+    (r) => (r.room || "").trim() === ROOM_TRAINING,
   ).length;
-  const trainingCount = total - avrCount;
 
   // Group by month
   const byMonth = reservations.reduce((acc, r) => {
@@ -60,13 +64,13 @@ export default function ReportsPage() {
       color: "emerald",
     },
     {
-      label: "Audio-Visual Room",
+      label: "Audio-Visual Room / Enhancement Area (Capacity: 40)",
       value: avrCount,
       icon: "videocam",
       color: "blue",
     },
     {
-      label: "Training Room",
+      label: "Individual Training / Small Group Discussion Room (Capacity: 10)",
       value: trainingCount,
       icon: "groups",
       color: "amber",
