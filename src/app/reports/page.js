@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
@@ -9,6 +9,7 @@ import { EASE_OUT } from "@/components/glass/motion";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import { ROOMS, findRoom } from "@/lib/rooms";
 import { holdsRoom } from "@/lib/reservationRules";
+import { useReservations } from "@/hooks/use-reservations";
 
 const monthLabel = (key) =>
   new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" });
@@ -16,25 +17,7 @@ const monthLabel = (key) =>
 export default function ReportsPage() {
   const { isAdmin, login } = useAdmin();
   const [showLogin, setShowLogin] = useState(false);
-  const [reservations, setReservations] = useState([]);
-  const [status, setStatus] = useState("loading"); // loading | ready | error
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/reservations", { cache: "no-store" });
-      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      setReservations(await res.json());
-      setStatus("ready");
-    } catch {
-      setStatus("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-    const refresh = setInterval(fetchData, 60_000);
-    return () => clearInterval(refresh);
-  }, [fetchData]);
+  const { reservations, status, reload, retry } = useReservations(isAdmin);
 
   const dated = reservations.filter((r) => r.startTime && holdsRoom(r));
   const stats = [
@@ -73,10 +56,7 @@ export default function ReportsPage() {
           </p>
           <button
             type="button"
-            onClick={() => {
-              setStatus("loading");
-              fetchData();
-            }}
+            onClick={retry}
             className="lg-btn lg-btn-secondary"
           >
             <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />

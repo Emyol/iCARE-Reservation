@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, RotateCw, Search } from "lucide-react";
@@ -17,6 +17,7 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { holdsRoom, manilaNow } from "@/lib/reservationRules";
 import { findRoom } from "@/lib/rooms";
 import { formatRange, minutesOf } from "@/lib/availability";
+import { useReservations } from "@/hooks/use-reservations";
 
 const VIEWS = [
   { id: "review", label: "To review" },
@@ -103,8 +104,7 @@ export default function RequestsPage() {
   const { isAdmin, login } = useAdmin();
   const hydrated = useHydrated();
   const [showLogin, setShowLogin] = useState(false);
-  const [reservations, setReservations] = useState([]);
-  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const { reservations, status, reload, retry } = useReservations(isAdmin, 30_000);
   const [view, setView] = useState("review");
   const [query, setQuery] = useState("");
   const [detail, setDetail] = useState(null);
@@ -123,26 +123,9 @@ export default function RequestsPage() {
   const refocus = () => {
     if (!handled.current) return;
     handled.current = false;
-    fetchData();
+    reload();
     requestAnimationFrame(() => headingRef.current?.focus());
   };
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/reservations", { cache: "no-store" });
-      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      setReservations(await res.json());
-      setStatus("ready");
-    } catch {
-      setStatus("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-    const refresh = setInterval(fetchData, 30_000); // new form submissions show up within half a minute
-    return () => clearInterval(refresh);
-  }, [fetchData, isAdmin]);
 
   const signIn = () => setShowLogin(true);
   const now = hydrated ? manilaNow() : "";
@@ -210,10 +193,7 @@ export default function RequestsPage() {
           </p>
           <button
             type="button"
-            onClick={() => {
-              setStatus("loading");
-              fetchData();
-            }}
+            onClick={retry}
             className="lg-btn lg-btn-secondary"
           >
             <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />

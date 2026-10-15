@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
@@ -30,20 +30,29 @@ export default function ActivityPage() {
   const [status, setStatus] = useState("loading"); // loading | ready | error
   const [filter, setFilter] = useState("all");
 
-  const fetchLogs = useCallback(async () => {
-    try {
-      const res = await fetch("/api/activity");
-      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      setLogs(await res.json());
-      setStatus("ready");
-    } catch {
-      setStatus("error");
-    }
-  }, []);
+  const [nonce, setNonce] = useState(0); // bumped by Retry
 
+  // Staff only; a response from an earlier load is dropped.
   useEffect(() => {
-    if (isAdmin) fetchLogs();
-  }, [isAdmin, fetchLogs]);
+    if (!isAdmin) return;
+    let live = true;
+    async function load() {
+      try {
+        const res = await fetch("/api/activity");
+        if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
+        const rows = await res.json();
+        if (!live) return;
+        setLogs(rows);
+        setStatus("ready");
+      } catch {
+        if (live) setStatus("error");
+      }
+    }
+    load();
+    return () => {
+      live = false;
+    };
+  }, [isAdmin, nonce]);
 
   const signIn = () => setShowLogin(true);
   // The log is stored oldest first.
@@ -72,7 +81,7 @@ export default function ActivityPage() {
             type="button"
             onClick={() => {
               setStatus("loading");
-              fetchLogs();
+              setNonce((n) => n + 1);
             }}
             className="lg-btn lg-btn-secondary"
           >

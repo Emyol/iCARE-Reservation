@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus, RotateCw } from "lucide-react";
@@ -20,6 +20,7 @@ import RequestSlotDialog from "@/components/availability/RequestSlotDialog";
 import PassStack from "@/components/availability/PassStack";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { useReservations } from "@/hooks/use-reservations";
 import { manilaNow } from "@/lib/reservationRules";
 import {
   addDays,
@@ -39,10 +40,13 @@ const VIEWS = [
   { id: "find", label: "Find a time" },
 ];
 
-function currentNow() {
-  const stamp = manilaNow();
+function currentNow(at = new Date()) {
+  const stamp = manilaNow(at);
   return { date: stamp.slice(0, 10), minutes: Number(stamp.slice(11, 13)) * 60 + Number(stamp.slice(14, 16)) };
 }
+
+// /availability?date=YYYY-MM-DD opens that day (the Calendar links here).
+const validDate = (value) => (/^\d{4}-\d{2}-\d{2}$/.test(value || "") ? value : null);
 
 // Same key for a booking whether it comes from the grid or the pass list.
 const bookingKey = (b) => String(b.rowIndex ?? `${b.room}-${b.start}-${b.end}`);
@@ -74,17 +78,17 @@ function Legend() {
   );
 }
 
-export default function AvailabilityPage() {
+export default function AvailabilityPage({ searchParams }) {
+  const linked = validDate(use(searchParams).date);
   const { isAdmin, login } = useAdmin();
   const [now, setNow] = useState(currentNow);
-  const [date, setDate] = useState(() => currentNow().date);
+  const [date, setDate] = useState(() => linked || currentNow().date);
   const [view, setView] = useState("day");
   const [direction, setDirection] = useState(0); // -1 earlier, 1 later, 0 view change
   // Motion would snap the slide rather than skip it, so zero it out: crossfade only.
   const slide = useReducedMotion() ? 0 : direction;
-  const [reservations, setReservations] = useState([]);
-  const [status, setStatus] = useState("loading"); // loading | ready | error
-  const [updatedAt, setUpdatedAt] = useState(null);
+  const { reservations, status, loadedAt, reload, retry } = useReservations(isAdmin);
+  const updatedAt = loadedAt ? formatClock(currentNow(loadedAt).minutes) : null;
 
   const [showLogin, setShowLogin] = useState(false);
   const [requestSlot, setRequestSlot] = useState(null);
@@ -95,34 +99,11 @@ export default function AvailabilityPage() {
   const isWide = useMediaQuery("(min-width: 1024px)");
   const hydrated = useHydrated();
 
-  // /availability?date=YYYY-MM-DD opens that day (the Calendar links here).
+  // Keeps "today" and the now-line current.
   useEffect(() => {
-    const linked = new URLSearchParams(window.location.search).get("date");
-    if (/^\d{4}-\d{2}-\d{2}$/.test(linked || "")) setDate(linked);
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/reservations", { cache: "no-store" });
-      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      setReservations(await res.json());
-      setUpdatedAt(formatClock(currentNow().minutes));
-      setStatus("ready");
-    } catch {
-      setStatus("error");
-    }
-  }, []);
-
-  // Refetch when admin state changes: the API returns full rows only to admins.
-  useEffect(() => {
-    fetchData();
-    const refresh = setInterval(fetchData, 60_000);
     const tick = setInterval(() => setNow(currentNow()), 60_000);
-    return () => {
-      clearInterval(refresh);
-      clearInterval(tick);
-    };
-  }, [fetchData, isAdmin]);
+    return () => clearInterval(tick);
+  }, []);
 
   const dayBookings = bookingsOn(reservations, date);
   const rooms = roomsFor(dayBookings);
@@ -248,10 +229,7 @@ export default function AvailabilityPage() {
           </p>
           <button
             type="button"
-            onClick={() => {
-              setStatus("loading");
-              fetchData();
-            }}
+            onClick={retry}
             className="lg-btn lg-btn-secondary"
           >
             <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />
@@ -347,12 +325,12 @@ export default function AvailabilityPage() {
           onClose={() => setBookingSlot(null)}
           onBooked={() => {
             setBookingSlot(null);
-            fetchData();
+            reload();
           }}
         />
       )}
       {emailTarget && (
-        <EmailModal reservation={emailTarget} onClose={() => setEmailTarget(null)} onSent={() => fetchData()} />
+        <EmailModal reservation={emailTarget} onClose={() => setEmailTarget(null)} onSent={reload} />
       )}
       {selected && (
         <ReservationDetailModal
@@ -360,7 +338,7 @@ export default function AvailabilityPage() {
           onClose={() => setSelected(null)}
           onUpdate={() => {
             setSelected(null);
-            fetchData();
+            reload();
           }}
         />
       )}

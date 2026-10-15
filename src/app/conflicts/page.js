@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { CircleCheck, RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
@@ -13,6 +13,7 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { holdsRoom, manilaNow } from "@/lib/reservationRules";
 import { findRoom } from "@/lib/rooms";
 import { formatRange, minutesOf } from "@/lib/availability";
+import { useReservations } from "@/hooks/use-reservations";
 
 /** Every pair of bookings in the same room whose times overlap. */
 function findConflicts(reservations) {
@@ -88,27 +89,8 @@ export default function ConflictsPage() {
   const { isAdmin, login } = useAdmin();
   const hydrated = useHydrated();
   const [showLogin, setShowLogin] = useState(false);
-  const [reservations, setReservations] = useState([]);
-  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const { reservations, status, reload, retry } = useReservations(isAdmin);
   const [detail, setDetail] = useState(null);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/reservations", { cache: "no-store" });
-      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      setReservations(await res.json());
-      setStatus("ready");
-    } catch {
-      setStatus("error");
-    }
-  }, []);
-
-  // Refetch when admin state changes: the API returns full rows only to admins.
-  useEffect(() => {
-    fetchData();
-    const refresh = setInterval(fetchData, 60_000);
-    return () => clearInterval(refresh);
-  }, [fetchData, isAdmin]);
 
   const signIn = () => setShowLogin(true);
   const now = hydrated ? manilaNow().slice(0, 16) : "";
@@ -133,10 +115,7 @@ export default function ConflictsPage() {
           </p>
           <button
             type="button"
-            onClick={() => {
-              setStatus("loading");
-              fetchData();
-            }}
+            onClick={retry}
             className="lg-btn lg-btn-secondary"
           >
             <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />
@@ -199,7 +178,7 @@ export default function ConflictsPage() {
           onClose={() => setDetail(null)}
           onUpdate={() => {
             setDetail(null);
-            fetchData();
+            reload();
           }}
         />
       )}
