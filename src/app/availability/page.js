@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Plus, RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
 import GlassShell from "@/components/glass/GlassShell";
 import GlassSegmented from "@/components/glass/GlassSegmented";
+import { slideByDirection } from "@/components/glass/motion";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import BookingModal from "@/components/BookingModal";
 import ReservationDetailModal from "@/components/ReservationDetailModal";
@@ -18,6 +19,7 @@ import FindTime from "@/components/availability/FindTime";
 import RequestSlotDialog from "@/components/availability/RequestSlotDialog";
 import PassStack from "@/components/availability/PassStack";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { manilaNow } from "@/lib/reservationRules";
 import {
   addDays,
@@ -41,15 +43,6 @@ function currentNow() {
   const stamp = manilaNow();
   return { date: stamp.slice(0, 10), minutes: Number(stamp.slice(11, 13)) * 60 + Number(stamp.slice(14, 16)) };
 }
-
-// The schedule slides the way the date moved (later = from the right) and
-// crossfades when only the view changes, so each change says what happened.
-const EASE_OUT = [0.23, 1, 0.32, 1];
-const scheduleMotion = {
-  enter: (dir) => ({ opacity: 0, transform: `translateX(${dir * 24}px)` }),
-  center: { opacity: 1, transform: "translateX(0px)", transition: { duration: 0.22, ease: EASE_OUT } },
-  exit: (dir) => ({ opacity: 0, transform: `translateX(${dir * -24}px)`, transition: { duration: 0.1, ease: EASE_OUT } }),
-};
 
 // Same key for a booking whether it comes from the grid or the pass list.
 const bookingKey = (b) => String(b.rowIndex ?? `${b.room}-${b.start}-${b.end}`);
@@ -100,6 +93,13 @@ export default function AvailabilityPage() {
   const [emailTarget, setEmailTarget] = useState(null);
   const [frontKey, setFrontKey] = useState(null);
   const isWide = useMediaQuery("(min-width: 1024px)");
+  const hydrated = useHydrated();
+
+  // /availability?date=YYYY-MM-DD opens that day (the Calendar links here).
+  useEffect(() => {
+    const linked = new URLSearchParams(window.location.search).get("date");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(linked || "")) setDate(linked);
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -188,7 +188,7 @@ export default function AvailabilityPage() {
     <GlassShell title="Availability" onSignIn={isAdmin ? null : () => setShowLogin(true)}>
       {/* Date navigation and view switch */}
       <div className="lg-chrome flex flex-wrap items-center gap-3 px-4 py-3">
-        <h1 className="lg-title mr-auto">{heading}</h1>
+        <h1 className="lg-title mr-auto">{hydrated ? heading : "Availability"}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -213,7 +213,7 @@ export default function AvailabilityPage() {
           <input
             id="availability-go-to"
             type="date"
-            value={date}
+            value={hydrated ? date : ""}
             onChange={(e) => e.target.value && goTo(e.target.value)}
             className="lg-input w-44"
           />
@@ -264,7 +264,7 @@ export default function AvailabilityPage() {
         <motion.div
           key={view === "find" ? "find" : `${view}-${view === "week" ? weekStart : date}`}
           custom={slide}
-          variants={scheduleMotion}
+          variants={slideByDirection}
           initial="enter"
           animate="center"
           exit="exit"

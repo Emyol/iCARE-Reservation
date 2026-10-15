@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { dealIn } from "@/components/glass/motion";
 import { ROOMS } from "@/lib/rooms";
 import { findOptions, formatDuration, formatRange } from "@/lib/availability";
 
@@ -105,9 +106,7 @@ export default function FindTime({ reservations, now, canAct, isAdmin, onPick })
           {options.map((o, i) => (
             <motion.li
               key={`${o.room.value}-${o.date}-${o.start}`}
-              initial={{ opacity: 0, transform: "translateY(8px)" }}
-              animate={{ opacity: 1, transform: "translateY(0px)" }}
-              transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1], delay: Math.min(i, 8) * 0.04 }}
+              {...dealIn(i)}
               className="lg-pass flex flex-wrap items-center justify-between gap-3 px-4 py-3"
             >
               <div>
