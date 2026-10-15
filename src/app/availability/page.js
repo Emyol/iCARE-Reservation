@@ -222,7 +222,7 @@ export default function AvailabilityPage() {
         {isAdmin && (
           <button
             type="button"
-            onClick={() => setBookingSlot({ date: now.date })}
+            onClick={() => setBookingSlot({ date: isPast ? now.date : date })}
             className="lg-btn lg-btn-primary"
           >
             <Plus aria-hidden="true" className="size-5" strokeWidth={2} />
