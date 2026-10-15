@@ -5,6 +5,7 @@ import {
   startOfWeek,
   formatClock,
   formatRange,
+  formatCompactRange,
   bookingsOn,
   roomsFor,
   hoursFor,
@@ -38,7 +39,9 @@ test("date helpers", () => {
   assert.equal(startOfWeek("2026-10-12"), "2026-10-12");
   assert.equal(formatClock(0), "12:00 AM");
   assert.equal(formatClock(12 * 60 + 5), "12:05 PM");
-  assert.equal(formatRange(13 * 60, 15 * 60 + 30), "1:00 PM – 3:30 PM");
+  assert.equal(formatRange(13 * 60, 15 * 60 + 30), "1:00 PM - 3:30 PM");
+  assert.equal(formatCompactRange(19 * 60, 20 * 60), "7-8 PM");
+  assert.equal(formatCompactRange(11 * 60 + 30, 13 * 60), "11:30 AM-1 PM");
 });
 
 test("bookingsOn keeps one day and drops rows that end before they start", () => {

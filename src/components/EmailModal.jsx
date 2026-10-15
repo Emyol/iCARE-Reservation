@@ -88,24 +88,24 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
   return (
     <div role="presentation"
-      className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-overlay"
+      className="lg-tokens lg-scrim fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="email-title" tabIndex={-1} className="bg-[#192233] w-full max-w-[480px] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col modal-content">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="email-title" tabIndex={-1} className="lg-sheet lg-materialize flex w-full max-w-[480px] flex-col overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-800">
+        <div className="px-6 pb-2 pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                <span aria-hidden="true" className="material-symbols-outlined text-indigo-400">
+              <div className="flex size-10 items-center justify-center rounded-full bg-[var(--lg-free-soft)]">
+                <span aria-hidden="true" className="material-symbols-outlined text-[var(--lg-free)]">
                   mail
                 </span>
               </div>
               <div>
-                <h2 id="email-title" className="text-lg font-bold text-slate-100">
+                <h2 id="email-title" className="lg-title">
                   Send Email
                 </h2>
-                <p className="text-slate-400 text-xs mt-0.5">
+                <p className="mt-0.5 text-[14px] lg-muted">
                   Notify the reservant about their booking
                 </p>
               </div>
@@ -113,7 +113,7 @@ export default function EmailModal({ reservation, onClose, onSent }) {
             <button
               aria-label="Close"
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-200 transition-colors"
+              className="lg-btn lg-btn-secondary lg-btn-icon"
             >
               <span aria-hidden="true" className="material-symbols-outlined">close</span>
             </button>
@@ -121,20 +121,20 @@ export default function EmailModal({ reservation, onClose, onSent }) {
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5">
+        <div className="space-y-5 px-6 py-4">
           {/* Reservation Summary */}
-          <div className="bg-slate-800/40 rounded-lg border border-slate-700/50 p-4 space-y-2">
-            <p className="text-sm font-semibold text-white">
+          <div className="lg-pass space-y-1.5 p-4">
+            <p className="font-semibold">
               {reservation?.eventName}
             </p>
-            <p className="text-xs text-slate-400">{reservation?.room}</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-[13px] lg-muted lg-num">{reservation?.room}</p>
+            <p className="text-[13px] lg-muted lg-num">
               {fmtDate(reservation?.startTime)} &middot;{" "}
-              {fmtTime(reservation?.startTime)} &ndash;{" "}
+              {fmtTime(reservation?.startTime)} -{" "}
               {fmtTime(reservation?.endTime)}
             </p>
             {reservation?.fullName && (
-              <p className="text-xs text-slate-400">
+              <p className="text-[13px] lg-muted lg-num">
                 Booked by: {reservation.fullName}
               </p>
             )}
@@ -142,15 +142,15 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* Recipient */}
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-slate-300">
+            <p className="text-[13px] font-semibold">
               Recipient Email
             </p>
-            <div className="flex items-center gap-2 h-10 px-4 bg-slate-800/50 border border-slate-700 rounded-lg">
-              <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-[18px]">
+            <div className="lg-input flex items-center gap-2">
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px] lg-muted">
                 email
               </span>
               <span
-                className={`text-sm ${recipientEmail ? "text-slate-200" : "text-red-400"}`}
+                className={`text-[15px] ${recipientEmail ? "" : "text-[var(--lg-danger)]"}`}
               >
                 {recipientEmail || "No email address on file"}
               </span>
@@ -159,7 +159,7 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* Email Type */}
           <div className="flex flex-col gap-2">
-            <p id="email-type-label" className="text-sm font-medium text-slate-300">
+            <p id="email-type-label" className="text-[13px] font-semibold">
               Email Type
             </p>
             <div role="group" aria-labelledby="email-type-label" className="grid grid-cols-3 gap-2">
@@ -188,27 +188,27 @@ export default function EmailModal({ reservation, onClose, onSent }) {
                   type="button"
                   aria-pressed={emailType === opt.value}
                   onClick={() => setEmailType(opt.value)}
-                  className={`p-3 rounded-lg border text-center transition-all ${
+                  className={`rounded-[14px] border p-3 text-center ${
                     emailType === opt.value
-                      ? "border-indigo-500 bg-indigo-500/10 text-indigo-300"
-                      : "border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600"
+                      ? "border-[var(--lg-action)] bg-[var(--lg-action)] text-[var(--lg-action-ink)]"
+                      : "border-[var(--lg-line)] bg-[var(--lg-sheet-fill)] hover:bg-[var(--lg-solid)]"
                   }`}
                 >
                   <span aria-hidden="true" className="material-symbols-outlined text-[20px] block mb-1">
                     {opt.icon}
                   </span>
-                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[13px] font-semibold">{opt.label}</p>
                 </button>
               ))}
             </div>
           </div>
 
           {/* CC Notice */}
-          <div className="p-3 bg-[#0f49bd]/10 border border-[#0f49bd]/20 rounded-lg flex gap-2 items-start">
-            <span aria-hidden="true" className="material-symbols-outlined text-[#0f49bd] text-[18px] shrink-0 mt-0.5">
+          <div className="flex items-start gap-2 rounded-[14px] border border-[var(--lg-line)] bg-[var(--lg-chrome-fill)] p-3">
+            <span aria-hidden="true" className="material-symbols-outlined mt-0.5 shrink-0 text-[18px] lg-muted">
               info
             </span>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-[13px] lg-muted">
               This email will be sent from your admin Outlook account. Other
               administrators will be automatically CC&apos;d.
             </p>
@@ -216,15 +216,15 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* Success Message */}
           {success && (
-            <div role="status" className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <span aria-hidden="true" className="material-symbols-outlined text-emerald-400 text-lg">
+            <div role="status" className="flex items-center gap-2 rounded-[14px] border border-[var(--lg-free)] bg-[var(--lg-free-soft)] p-3">
+              <span aria-hidden="true" className="material-symbols-outlined text-lg text-[var(--lg-free)]">
                 check_circle
               </span>
               <div>
-                <p className="text-sm text-emerald-400 font-medium">
+                <p className="font-semibold">
                   Email sent successfully!
                 </p>
-                <p className="text-xs text-emerald-400/70 mt-0.5">
+                <p className="mt-0.5 text-[13px]">
                   {success.type === "conflict" ? "Conflict notice" : "Confirmation"}{" "}
                   sent to {success.sentTo}
                 </p>
@@ -234,22 +234,22 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* Error Message */}
           {error && (
-            <div role="alert" className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-lg">
+            <div role="alert" className="flex items-center gap-2 rounded-[14px] border border-[var(--lg-danger)] bg-[var(--lg-danger-soft)] p-3">
+              <span aria-hidden="true" className="material-symbols-outlined text-lg text-[var(--lg-danger)]">
                 error
               </span>
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-[14px] font-medium">{error}</p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-slate-800/30 flex items-center justify-end gap-3 border-t border-slate-800">
+        <div className="flex items-center justify-end gap-3 px-6 pb-6 pt-2">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="px-5 h-10 rounded-lg font-semibold text-slate-300 hover:bg-slate-700 transition-colors text-sm"
+            className="lg-btn lg-btn-secondary"
           >
             {success ? "Close" : "Cancel"}
           </button>
@@ -257,12 +257,12 @@ export default function EmailModal({ reservation, onClose, onSent }) {
             <button
               onClick={handleSend}
               disabled={loading || !recipientEmail}
-              className="px-6 h-10 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="lg-btn lg-btn-primary"
             >
               {loading ? (
                 <>
                   <svg
-                    className="animate-spin h-4 w-4 text-white"
+                    className="size-4 animate-spin motion-reduce:hidden"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"

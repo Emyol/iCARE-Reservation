@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "./liquid-glass.css";
 import { AdminProvider } from "@/components/AdminProvider";
 
 const inter = Inter({

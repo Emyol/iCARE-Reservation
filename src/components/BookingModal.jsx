@@ -4,10 +4,10 @@ import { useState } from "react";
 import { ROOMS } from "@/lib/rooms";
 import { manilaNow, validateReservation } from "@/lib/reservationRules";
 import ConflictOverride from "@/components/ConflictOverride";
+import { X } from "lucide-react";
 import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 
-const inputClass =
-  "w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all";
+const inputClass = "lg-input min-h-12";
 
 /**
  * Manual Booking Modal
@@ -120,53 +120,50 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
 
   return (
     <div role="presentation"
-      className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-overlay"
+      className="lg-tokens lg-scrim fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="booking-title" tabIndex={-1} className="bg-[#192233] w-full max-w-[520px] max-h-[92vh] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col modal-content">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="booking-title" tabIndex={-1} className="lg-sheet lg-materialize flex max-h-[92vh] w-full max-w-[540px] flex-col overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-800">
+        <div className="px-6 pb-2 pt-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 id="booking-title" className="text-2xl font-bold text-slate-100">
+              <h2 id="booking-title" className="lg-title">
                 Manual Room Booking
               </h2>
-              <p className="text-slate-400 text-sm mt-1">
+              <p className="mt-1 text-[15px] lg-muted">
                 Fill in the details to schedule a room
               </p>
             </div>
             <button
               onClick={onClose}
               aria-label="Close"
-              className="text-slate-400 hover:text-slate-200 transition-colors"
+              className="lg-btn lg-btn-secondary lg-btn-icon"
             >
-              <span aria-hidden="true" className="material-symbols-outlined">close</span>
+              <X aria-hidden="true" className="size-5" strokeWidth={2} />
             </button>
           </div>
         </div>
 
         {emailProblem ? (
           <div className="p-6 flex flex-col gap-5 overflow-y-auto">
-            <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <span aria-hidden="true" className="material-symbols-outlined text-emerald-400 text-2xl shrink-0">
-                check_circle
-              </span>
-              <p className="text-sm font-semibold text-emerald-400">
+            <div className="flex items-center gap-3 rounded-[14px] border border-[var(--lg-free)] bg-[var(--lg-free-soft)] p-4">
+              <p className="font-semibold">
                 Booking saved to the schedule.
               </p>
             </div>
-            <div role="alert" className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-              <p className="text-sm font-semibold text-amber-400">
+            <div role="alert" className="rounded-[14px] border border-[var(--lg-attention)] bg-[var(--lg-attention-soft)] p-4">
+              <p className="font-semibold">
                 No confirmation email was sent
               </p>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+              <p className="mt-1 text-[14px]">
                 {emailProblem} Use the mail button on this booking to send it
                 once the problem is fixed.
               </p>
             </div>
             <button
               onClick={() => onBooked()}
-              className="w-full h-11 bg-[#0f49bd] hover:bg-[#0f49bd]/90 rounded-lg font-semibold text-white transition-all"
+              className="lg-btn lg-btn-primary w-full"
             >
               Close
             </button>
@@ -177,7 +174,7 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 overflow-y-auto">
               {/* Room Selection */}
               <div className="flex flex-col gap-2">
-                <label htmlFor="booking-room" className="text-sm font-medium text-slate-300">
+                <label htmlFor="booking-room" className="text-[13px] font-semibold">
                   Room Selection
                 </label>
                 <select
@@ -200,7 +197,7 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
 
               {/* Professor / Event Name */}
               <div className="flex flex-col gap-2">
-                <label htmlFor="booking-event" className="text-sm font-medium text-slate-300">
+                <label htmlFor="booking-event" className="text-[13px] font-semibold">
                   Professor / Event Name
                 </label>
                 <input
@@ -217,8 +214,8 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
               {/* Full Name + Attendees row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="booking-name" className="text-sm font-medium text-slate-300">
-                    Full Name <span className="text-red-400">*</span>
+                  <label htmlFor="booking-name" className="text-[13px] font-semibold">
+                    Full Name <span className="text-[var(--lg-danger)]">*</span>
                   </label>
                   <input
                     id="booking-name"
@@ -231,7 +228,7 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="booking-attendees" className="text-sm font-medium text-slate-300">
+                  <label htmlFor="booking-attendees" className="text-[13px] font-semibold">
                     No. of Attendees
                   </label>
                   <input
@@ -247,7 +244,7 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
                     placeholder="e.g. 20"
                   />
                   {capacity && (
-                    <p id="booking-capacity" className="text-xs text-slate-400">
+                    <p id="booking-capacity" className="text-[13px] lg-muted">
                       This room holds {capacity} people.
                     </p>
                   )}
@@ -256,7 +253,7 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
 
               {/* FEU Email */}
               <div className="flex flex-col gap-2">
-                <label htmlFor="booking-email" className="text-sm font-medium text-slate-300">
+                <label htmlFor="booking-email" className="text-[13px] font-semibold">
                   FEU Tech Email Address
                 </label>
                 <input
@@ -273,7 +270,7 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
               {/* Date + Time Pickers: one date, so bookings can't span midnight */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="booking-date" className="text-sm font-medium text-slate-300">
+                  <label htmlFor="booking-date" className="text-[13px] font-semibold">
                     Date
                   </label>
                   <input
@@ -283,11 +280,11 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
                     value={date}
                     onChange={changeSlot(setDate)}
                     disabled={loading}
-                    className={`${inputClass} [color-scheme:dark]`}
+                    className={inputClass}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="booking-start" className="text-sm font-medium text-slate-300">
+                  <label htmlFor="booking-start" className="text-[13px] font-semibold">
                     Start Time
                   </label>
                   <input
@@ -297,11 +294,11 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
                     value={start}
                     onChange={changeSlot(setStart)}
                     disabled={loading}
-                    className={`${inputClass} [color-scheme:dark]`}
+                    className={inputClass}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="booking-end" className="text-sm font-medium text-slate-300">
+                  <label htmlFor="booking-end" className="text-[13px] font-semibold">
                     End Time
                   </label>
                   <input
@@ -311,7 +308,7 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
                     value={end}
                     onChange={changeSlot(setEnd)}
                     disabled={loading}
-                    className={`${inputClass} [color-scheme:dark]`}
+                    className={inputClass}
                   />
                 </div>
               </div>
@@ -330,34 +327,31 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
 
               {/* Error Message */}
               {error && (
-                <div role="alert" className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-lg">
-                    error
-                  </span>
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
+                <p role="alert" className="rounded-[14px] border border-[var(--lg-danger)] bg-[var(--lg-danger-soft)] px-4 py-3 text-[14px] font-medium">
+                  {error}
+                </p>
               )}
             </form>
 
             {/* Footer */}
-            <div className="p-6 bg-slate-800/30 flex items-center justify-end gap-3 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-3 px-6 pb-6 pt-3">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="px-6 h-11 rounded-lg font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
+                className="lg-btn lg-btn-secondary"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={loading || Boolean(conflicts && !override)}
-                className="px-8 h-11 bg-[#0f49bd] hover:bg-[#0f49bd]/90 rounded-lg font-semibold text-white shadow-lg shadow-[#0f49bd]/20 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="lg-btn lg-btn-primary"
               >
                 {loading ? (
                   <>
                     <svg
-                      className="animate-spin h-4 w-4 text-white"
+                      className="size-4 animate-spin motion-reduce:hidden"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -380,9 +374,6 @@ export default function BookingModal({ onClose, onBooked, initial = {} }) {
                   </>
                 ) : (
                   <>
-                    <span aria-hidden="true" className="material-symbols-outlined text-xl">
-                      calendar_add_on
-                    </span>
                     <span>{conflicts ? "Book Anyway" : "Book Room"}</span>
                   </>
                 )}
