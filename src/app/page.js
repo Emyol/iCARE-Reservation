@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { requestFormUrl } from "@/lib/requestForm";
 
 function SplashScreen({ onComplete }) {
   const line1 = "Always for the students,";
@@ -63,6 +64,7 @@ function SplashScreen({ onComplete }) {
 export default function LandingPage() {
   const [showSplash, setShowSplash] = useState(true);
   const handleComplete = useCallback(() => setShowSplash(false), []);
+  const formUrl = requestFormUrl();
 
   return (
     <>
@@ -137,6 +139,17 @@ export default function LandingPage() {
               <span className="material-symbols-outlined">calendar_today</span>
               View Schedule
             </Link>
+            {formUrl && (
+              <a
+                href={formUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-8 py-4 glass-panel glass-panel-interactive text-slate-200 font-bold rounded-2xl text-lg w-full sm:w-auto justify-center relative z-20"
+              >
+                <span className="material-symbols-outlined">edit_calendar</span>
+                Request a Room
+              </a>
+            )}
           </motion.div>
 
           <motion.div

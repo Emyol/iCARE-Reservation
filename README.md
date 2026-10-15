@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Request form link
+
+The public "Request a room" buttons stay hidden until `NEXT_PUBLIC_REQUEST_FORM_URL`
+is set to the Google Form's share link (Form → Send → link). To pre-fill the room
+and time, also set `NEXT_PUBLIC_REQUEST_FORM_PREFILL_URL` to a "Get pre-filled link"
+URL with the answers replaced by `{room}`, `{date}`, `{start}` and `{end}`.
+Never use the response spreadsheet's URL: it contains requesters' names and emails.
+
+## Tests
+
+`npm test` runs the booking-rule unit tests (`tests/`) with Node's built-in runner.
