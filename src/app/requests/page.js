@@ -113,17 +113,18 @@ export default function RequestsPage() {
   const headingRef = useRef(null);
   const handled = useRef(false);
 
-  // A handled request leaves the queue, taking the button that opened the
-  // dialog with it, so focus goes to the heading. Cancelling leaves focus on
-  // the button that opened the dialog, as usual.
+  // Once a dialog that handled a request closes, reload so its card visibly
+  // leaves the queue (not hidden behind the dialog), and put focus on the
+  // heading, since the button that opened the dialog goes with the card.
+  // Cancelling leaves focus on that button, as usual.
+  const markHandled = () => {
+    handled.current = true;
+  };
   const refocus = () => {
     if (!handled.current) return;
     handled.current = false;
-    requestAnimationFrame(() => headingRef.current?.focus());
-  };
-  const markHandled = () => {
-    handled.current = true;
     fetchData();
+    requestAnimationFrame(() => headingRef.current?.focus());
   };
 
   const fetchData = useCallback(async () => {
