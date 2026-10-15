@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
+import { ChevronLeft, ChevronRight, Plus, RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
-import Sidebar from "@/components/Sidebar";
+import GlassShell from "@/components/glass/GlassShell";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import BookingModal from "@/components/BookingModal";
 import ReservationDetailModal from "@/components/ReservationDetailModal";
@@ -39,11 +41,29 @@ const longDate = (date) =>
     weekday: "long",
     day: "numeric",
     month: "long",
-    year: "numeric",
   });
 
+function Legend() {
+  return (
+    <ul className="flex flex-wrap gap-x-5 gap-y-2 px-1 text-[13px] font-medium" aria-label="Legend">
+      <li className="flex items-center gap-2">
+        <span aria-hidden="true" className="h-4 w-7 rounded-md border-2 border-dashed border-[var(--lg-free)] bg-[var(--lg-free-soft)]" />
+        Free
+      </li>
+      <li className="flex items-center gap-2">
+        <span aria-hidden="true" className="h-4 w-7 rounded-md border border-[var(--lg-rim)] bg-[var(--lg-pass-fill)] shadow-[var(--lg-shadow-soft)]" />
+        Booked
+      </li>
+      <li className="flex items-center gap-2">
+        <span aria-hidden="true" className="h-4 w-7 rounded-md border border-[var(--lg-danger)] bg-[var(--lg-danger-soft)]" />
+        Overlapping bookings (marked &ldquo;Conflict&rdquo;)
+      </li>
+    </ul>
+  );
+}
+
 export default function AvailabilityPage() {
-  const { isAdmin, login, logout } = useAdmin();
+  const { isAdmin, login } = useAdmin();
   const [now, setNow] = useState(currentNow);
   const [date, setDate] = useState(() => currentNow().date);
   const [view, setView] = useState("day");
@@ -108,169 +128,128 @@ export default function AvailabilityPage() {
 
   const step = view === "week" ? 7 : 1;
   const weekStart = startOfWeek(date);
+  const heading =
+    view === "week" ? `Week of ${longDate(weekStart)}` : view === "find" ? "Find a free room" : `${isToday ? "Today, " : ""}${longDate(date)}`;
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      <Sidebar isAdmin={isAdmin} onLoginClick={() => setShowLogin(true)} onLogout={logout} />
-
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:px-8 sticky top-0 z-30">
-          <h1 className="text-lg md:text-xl font-bold tracking-tight">
-            <span className="text-teal-400">iCARE</span> Availability
-          </h1>
-        </header>
-
-        <div className="p-4 md:p-8 flex flex-col gap-5 max-w-7xl mx-auto w-full">
-          {/* Date navigation and view switch */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                aria-label={view === "week" ? "Previous week" : "Previous day"}
-                onClick={() => setDate(addDays(date, -step))}
-                className="size-11 rounded-lg border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
-              >
-                <span aria-hidden="true" className="material-symbols-outlined">chevron_left</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDate(now.date)}
-                className="h-11 rounded-lg border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-200 hover:bg-white/10"
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                aria-label={view === "week" ? "Next week" : "Next day"}
-                onClick={() => setDate(addDays(date, step))}
-                className="size-11 rounded-lg border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
-              >
-                <span aria-hidden="true" className="material-symbols-outlined">chevron_right</span>
-              </button>
-              <label htmlFor="availability-go-to" className="sr-only">Go to date</label>
-              <input
-                id="availability-go-to"
-                type="date"
-                value={date}
-                onChange={(e) => e.target.value && setDate(e.target.value)}
-                className="h-11 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-slate-200 [color-scheme:dark]"
-              />
-            </div>
-            <div role="group" aria-label="View" className="flex rounded-lg border border-white/10 bg-white/5 p-1">
-              {VIEWS.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  aria-pressed={view === v.id}
-                  onClick={() => setView(v.id)}
-                  className={`min-h-9 rounded-md px-3 text-sm font-medium ${
-                    view === v.id ? "bg-white/10 text-white" : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-xl font-bold text-white">
-              {view === "week"
-                ? `Week of ${longDate(weekStart)}`
-                : view === "find"
-                  ? "Find a free room"
-                  : `${isToday ? "Today, " : ""}${longDate(date)}`}
-            </h2>
-            <p className="text-xs text-slate-400" role="status">
-              {status === "loading" && "Loading the schedule…"}
-              {status === "ready" && `Updated ${updatedAt} · times in PH time`}
-            </p>
-          </div>
-
-          {status === "error" && (
-            <div role="alert" className="status-message status-message-warning flex-wrap justify-between">
-              <p>
-                <strong>Couldn&apos;t load the schedule.</strong>{" "}
-                {updatedAt ? `Showing the schedule as of ${updatedAt}. ` : ""}
-                Requests and bookings are paused until it loads.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus("loading");
-                  fetchData();
-                }}
-                className="rounded-lg border border-amber-300/40 px-3 py-1.5 text-sm font-semibold hover:bg-amber-500/10"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {status !== "error" && view !== "find" && (
-            <ul className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-300" aria-label="Legend">
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="h-3 w-5 rounded-sm border border-dashed border-emerald-400" />
-                Free
-              </li>
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="h-3 w-5 rounded-sm border border-l-4 border-indigo-400 bg-indigo-500/20" />
-                Booked
-              </li>
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="h-3 w-5 rounded-sm border border-l-4 border-red-400 bg-red-500/15" />
-                Overlapping bookings (marked &ldquo;Conflict&rdquo;)
-              </li>
-            </ul>
-          )}
-
-          {status === "loading" && reservations.length === 0 ? (
-            <div className="flex flex-col gap-3" aria-hidden="true">
-              <div className="skeleton h-20 rounded-xl" />
-              <div className="skeleton h-20 rounded-xl" />
-            </div>
-          ) : view === "day" ? (
-            <>
-              {isPast && <p className="text-sm text-slate-400">This day has passed. Bookings are shown for reference.</p>}
-              {!isPast && dayBookings.length === 0 && status === "ready" && (
-                <p className="status-message status-message-success">
-                  Both rooms are free all day. Pick a free block to {isAdmin ? "book it" : "request it"}.
-                </p>
-              )}
-              <div className="hidden md:block">
-                <DayGrid {...dayProps} />
-              </div>
-              <div className="md:hidden">
-                <DayAgenda {...dayProps} />
-              </div>
-            </>
-          ) : view === "week" ? (
-            <WeekGrid
-              reservations={reservations}
-              weekStart={weekStart}
-              now={now}
-              onOpenDay={(d) => {
-                setDate(d);
-                setView("day");
-              }}
-            />
-          ) : (
-            <FindTime
-              reservations={reservations}
-              now={now}
-              canAct={status === "ready"}
-              isAdmin={isAdmin}
-              onPick={pickSlot}
-            />
-          )}
+    <GlassShell title="Availability" onSignIn={isAdmin ? null : () => setShowLogin(true)}>
+      {/* Date navigation and view switch */}
+      <div className="lg-chrome flex flex-wrap items-center gap-3 px-4 py-3">
+        <h1 className="lg-title mr-auto">{heading}</h1>
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label={view === "week" ? "Previous week" : "Previous day"}
+            onClick={() => setDate(addDays(date, -step))}
+            className="lg-btn lg-btn-secondary lg-btn-icon"
+          >
+            <ChevronLeft aria-hidden="true" className="size-5" strokeWidth={2} />
+          </button>
+          <button type="button" onClick={() => setDate(now.date)} className="lg-btn lg-btn-secondary">
+            Today
+          </button>
+          <button
+            type="button"
+            aria-label={view === "week" ? "Next week" : "Next day"}
+            onClick={() => setDate(addDays(date, step))}
+            className="lg-btn lg-btn-secondary lg-btn-icon"
+          >
+            <ChevronRight aria-hidden="true" className="size-5" strokeWidth={2} />
+          </button>
+          <label htmlFor="availability-go-to" className="sr-only">Go to date</label>
+          <input
+            id="availability-go-to"
+            type="date"
+            value={date}
+            onChange={(e) => e.target.value && setDate(e.target.value)}
+            className="lg-input w-auto min-w-0 flex-1 sm:flex-none"
+          />
         </div>
+        <div role="group" aria-label="View" className="lg-segmented">
+          {VIEWS.map((v) => (
+            <button key={v.id} type="button" aria-pressed={view === v.id} onClick={() => setView(v.id)}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setBookingSlot({ date: now.date })}
+            className="lg-btn lg-btn-primary"
+          >
+            <Plus aria-hidden="true" className="size-5" strokeWidth={2} />
+            New booking
+          </button>
+        )}
+      </div>
 
-        <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-400 text-xs">
-            © {new Date().getFullYear()} iCARE Room Reservation System — FEU Institute of Technology
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        {status !== "error" && view !== "find" ? <Legend /> : <span />}
+        <p className="text-[13px] lg-muted" role="status">
+          {status === "loading" && "Loading the schedule…"}
+          {status === "ready" && `Updated ${updatedAt}. Times are Philippine time.`}
+        </p>
+      </div>
+
+      {status === "error" && (
+        <div role="alert" className="lg-banner">
+          <p>
+            <strong>Couldn&apos;t load the schedule.</strong>{" "}
+            {updatedAt ? `Showing the schedule as of ${updatedAt}. ` : ""}
+            Requests and bookings are paused until it loads.
           </p>
-        </footer>
-      </main>
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("loading");
+              fetchData();
+            }}
+            className="lg-btn lg-btn-secondary"
+          >
+            <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />
+            Retry
+          </button>
+        </div>
+      )}
+
+      {status === "loading" && reservations.length === 0 ? (
+        <div className="lg-sheet flex flex-col gap-3 p-6" aria-hidden="true">
+          <div className="h-16 animate-pulse rounded-[14px] bg-[var(--lg-line)] motion-reduce:animate-none" />
+          <div className="h-16 animate-pulse rounded-[14px] bg-[var(--lg-line)] motion-reduce:animate-none" />
+        </div>
+      ) : view === "day" ? (
+        <>
+          {isPast && <p className="px-1 text-[15px] lg-muted">This day has passed. Bookings are shown for reference.</p>}
+          {!isPast && dayBookings.length === 0 && status === "ready" && (
+            <div className="lg-pass flex flex-wrap items-center gap-6 p-6">
+              <Image src="/brand/glass-pass-empty.webp" alt="" width={140} height={140} className="rounded-2xl" />
+              <div className="min-w-0 max-w-prose">
+                <h2 className="lg-title">Both rooms are free all day</h2>
+                <p className="mt-1 lg-muted">Pick a free block below to {isAdmin ? "book it" : "request it"}.</p>
+              </div>
+            </div>
+          )}
+          <div className="hidden md:block">
+            <DayGrid {...dayProps} />
+          </div>
+          <div className="md:hidden">
+            <DayAgenda {...dayProps} />
+          </div>
+        </>
+      ) : view === "week" ? (
+        <WeekGrid
+          reservations={reservations}
+          weekStart={weekStart}
+          now={now}
+          onOpenDay={(d) => {
+            setDate(d);
+            setView("day");
+          }}
+        />
+      ) : (
+        <FindTime reservations={reservations} now={now} canAct={status === "ready"} isAdmin={isAdmin} onPick={pickSlot} />
+      )}
 
       {showLogin && (
         <AdminLoginModal
@@ -302,6 +281,6 @@ export default function AvailabilityPage() {
           }}
         />
       )}
-    </div>
+    </GlassShell>
   );
 }

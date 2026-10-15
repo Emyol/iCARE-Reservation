@@ -33,7 +33,20 @@ export function formatClock(minutes) {
 }
 
 export function formatRange(start, end) {
-  return `${formatClock(start)} – ${formatClock(end)}`;
+  return `${formatClock(start)} - ${formatClock(end)}`;
+}
+
+/** Short form for narrow blocks: "7-8 PM", "11:30 AM-1 PM". */
+export function formatCompactRange(start, end) {
+  const part = (m) => {
+    const h = Math.floor(m / 60) % 12 || 12;
+    const min = m % 60;
+    return min ? `${h}:${String(min).padStart(2, "0")}` : `${h}`;
+  };
+  const suffix = (m) => (Math.floor(m / 60) % 24 >= 12 ? "PM" : "AM");
+  return suffix(start) === suffix(end)
+    ? `${part(start)}-${part(end)} ${suffix(end)}`
+    : `${part(start)} ${suffix(start)}-${part(end)} ${suffix(end)}`;
 }
 
 export function formatDuration(minutes) {
