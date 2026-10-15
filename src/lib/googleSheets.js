@@ -1,3 +1,4 @@
+import { statusOf } from "./reservationRules.js";
 import { google } from "googleapis";
 
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
@@ -215,6 +216,7 @@ export async function getReservations() {
       const timestamp = row[COL.TIMESTAMP] || "";
       const emailSent =
         (row[COL.CONFIRMATION_EMAIL] || "").toUpperCase() === "TRUE";
+      const emailNote = row[COL.CONFIRMATION_EMAIL_BODY] || "";
       // Use FEU Tech Email (col M) first, then Email Address (col D)
       const recipientEmail = row[COL.FEU_EMAIL] || row[COL.EMAIL] || "";
 
@@ -236,6 +238,8 @@ export async function getReservations() {
         notes: row[COL.NOTES] || "",
         attendees: row[COL.ATTENDEES] || "",
         emailSent,
+        emailNote,
+        status: statusOf({ emailSent, emailNote }),
         recipientEmail,
         rowIndex: idx + 2, // +2 because: +1 for header, +1 for 1-based row numbers
       };

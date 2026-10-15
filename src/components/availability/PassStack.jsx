@@ -12,12 +12,11 @@ const ROOM_SHORT = {
   "Training Room": "Training",
 };
 
-// The sheet records whether a confirmation email went out, not a booking
-// status, so that is the only state shown besides an overlap.
+// Status comes from the email columns (see statusOf); an overlap outranks it.
 function StatusPill({ booking }) {
   if (booking.conflict) return <span className="lg-pill lg-pill-conflict">Conflict</span>;
-  if (booking.emailSent) return <span className="lg-pill lg-pill-confirmed">Emailed</span>;
-  return <span className="lg-pill lg-pill-pending">Not emailed</span>;
+  if (booking.status === "confirmed") return <span className="lg-pill lg-pill-confirmed">Confirmed</span>;
+  return <span className="lg-pill lg-pill-pending">Pending</span>;
 }
 
 /**
@@ -52,7 +51,10 @@ export default function PassStack({ passes, frontKey, onFront, onOpenDetails, on
   return (
     <LayoutGroup>
       <aside className="flex flex-col gap-3" aria-label="Bookings">
+        {/* Keyed so a new front pass is a new element: Motion animates shared
+            elements by remounting, and breaks if layoutId changes in place. */}
         <motion.section
+          key={front.key}
           ref={frontRef}
           layoutId={front.key}
           layout="position"

@@ -10,13 +10,13 @@ import { dealIn } from "@/components/glass/motion";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import ReservationDetailModal from "@/components/ReservationDetailModal";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { manilaNow } from "@/lib/reservationRules";
+import { holdsRoom, manilaNow } from "@/lib/reservationRules";
 import { findRoom } from "@/lib/rooms";
 import { formatRange, minutesOf } from "@/lib/availability";
 
 /** Every pair of bookings in the same room whose times overlap. */
 function findConflicts(reservations) {
-  const rows = reservations.filter((r) => r.startTime && r.endTime);
+  const rows = reservations.filter((r) => r.startTime && r.endTime && holdsRoom(r));
   const pairs = [];
   for (let i = 0; i < rows.length; i++) {
     for (let j = i + 1; j < rows.length; j++) {

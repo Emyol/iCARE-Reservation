@@ -362,6 +362,7 @@ export function findConflict(reservation, allReservations) {
 
   for (const existing of allReservations) {
     if (existing.room !== room) continue;
+    if (existing.status === "declined") continue; // no longer holds the room
     // Skip self (if this reservation is already in the list)
     if (
       existing.startTime === reservation.startTime &&

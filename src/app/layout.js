@@ -1,31 +1,24 @@
-import { Inter } from "next/font/google";
 import "./globals.css";
 import "./liquid-glass.css";
 import { AdminProvider } from "@/components/AdminProvider";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
 export const metadata = {
   title: "iCARE Room Reservation | FEU Institute of Technology",
   description:
-    "Real-time room scheduling dashboard for FEU Institute of Technology. View and manage AVR and Study Area reservations.",
-  keywords: ["room reservation", "FEU", "scheduling", "AVR", "study area"],
+    "See when the iCARE Audio-Visual Room and Training Room at FEU Institute of Technology are free, and request one.",
+  keywords: ["room reservation", "FEU Tech", "iCARE", "AVR", "training room"],
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body>
         <AdminProvider>{children}</AdminProvider>
       </body>
     </html>

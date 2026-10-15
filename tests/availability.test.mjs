@@ -110,3 +110,11 @@ test("findOptions respects capacity, duration, and the current time", () => {
 
   assert.equal(findOptions(data, { attendees: 41, duration: 60, fromDate: "2026-10-16", now }).length, 0);
 });
+
+test("bookingsOn leaves out declined requests, so their time shows as free", () => {
+  const rows = [
+    row(AVR, "2026-10-16", "13:00", "15:00", { status: "declined" }),
+    row(AVR, "2026-10-16", "15:00", "16:00", { status: "pending" }),
+  ];
+  assert.deepEqual(bookingsOn(rows, "2026-10-16").map((b) => b.start), [15 * 60]);
+});

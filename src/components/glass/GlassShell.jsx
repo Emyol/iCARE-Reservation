@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MotionConfig } from "framer-motion";
-import { BarChart3, CalendarClock, CalendarDays, History, LogIn, LogOut, TriangleAlert } from "lucide-react";
+import { BarChart3, CalendarClock, CalendarDays, History, Inbox, LogIn, LogOut, TriangleAlert } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
 
 const PUBLIC_NAV = [
@@ -14,6 +14,7 @@ const PUBLIC_NAV = [
 
 const STAFF_NAV = [
   { href: "/availability", label: "Availability", icon: CalendarClock },
+  { href: "/requests", label: "Requests", icon: Inbox },
   { href: "/conflicts", label: "Conflicts", icon: TriangleAlert },
   { href: "/schedule", label: "Calendar", icon: CalendarDays },
   { href: "/reports", label: "Reports", icon: BarChart3 },

@@ -10,7 +10,7 @@ import { getAdmin, requireAdmin } from "@/lib/auth";
 import {
   validateReservation,
   findOverlaps,
-  toPublicReservation,
+  publicReservations,
   conflictSummary,
 } from "@/lib/reservationRules";
 
@@ -24,7 +24,7 @@ export async function GET(request) {
     const admin = getAdmin(request);
     const reservations = await getReservations();
     const response = NextResponse.json(
-      admin ? reservations : reservations.map(toPublicReservation),
+      admin ? reservations : publicReservations(reservations),
     );
     response.headers.set("Cache-Control", "private, no-store, max-age=0");
     return response;

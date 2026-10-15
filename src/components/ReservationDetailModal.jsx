@@ -229,8 +229,12 @@ export default function ReservationDetailModal({
                     />
                     <DetailField
                       icon="mail"
-                      label="Email Status"
-                      value={reservation.emailSent ? "Sent ✅" : "Not sent"}
+                      label="Status"
+                      value={
+                        { pending: "Pending: no email sent yet", confirmed: "Confirmed: email sent", declined: "Declined: room-not-available email sent" }[
+                          reservation.status
+                        ] || (reservation.emailSent ? "Email sent" : "No email sent yet")
+                      }
                     />
                   </>
                 )}
