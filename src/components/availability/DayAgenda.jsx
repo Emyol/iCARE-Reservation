@@ -28,7 +28,7 @@ export default function DayAgenda({ rooms, bookings, hours, notBefore, canAct, i
                   type="button"
                   disabled={!canAct}
                   onClick={() => onSelectGap(room, row.g)}
-                  className="grid min-h-14 grid-cols-[108px_minmax(0,1fr)] items-center gap-3 rounded-[14px] border-2 border-dashed border-[var(--lg-free)] bg-[var(--lg-free-soft)] px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                  className="lg-press grid min-h-14 grid-cols-[108px_minmax(0,1fr)] items-center gap-3 rounded-[14px] border-2 border-dashed border-[var(--lg-free)] bg-[var(--lg-free-soft)] px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="text-[13px] lg-num">{formatRange(row.g.start, row.g.end)}</span>
                   <span className="text-[15px] font-bold text-[var(--lg-free)]">
@@ -41,7 +41,7 @@ export default function DayAgenda({ rooms, bookings, hours, notBefore, canAct, i
                   key={`b-${row.b.rowIndex ?? row.b.startTime}-${row.b.lane}`}
                   type="button"
                   onClick={() => onSelectBooking(row.b)}
-                  className={`grid min-h-14 grid-cols-[108px_minmax(0,1fr)] items-center gap-3 rounded-[14px] border px-3 py-2 text-left ${
+                  className={`lg-press grid min-h-14 grid-cols-[108px_minmax(0,1fr)] items-center gap-3 rounded-[14px] border px-3 py-2 text-left ${
                     row.b.conflict
                       ? "border-[var(--lg-danger)] bg-[var(--lg-danger-soft)]"
                       : "border-[var(--lg-line)] bg-[var(--lg-pass-fill)] shadow-[var(--lg-shadow-soft)]"

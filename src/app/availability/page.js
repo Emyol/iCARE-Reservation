@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus, RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
 import GlassShell from "@/components/glass/GlassShell";
+import GlassSegmented from "@/components/glass/GlassSegmented";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import BookingModal from "@/components/BookingModal";
 import ReservationDetailModal from "@/components/ReservationDetailModal";
@@ -39,6 +41,15 @@ function currentNow() {
   const stamp = manilaNow();
   return { date: stamp.slice(0, 10), minutes: Number(stamp.slice(11, 13)) * 60 + Number(stamp.slice(14, 16)) };
 }
+
+// The schedule slides the way the date moved (later = from the right) and
+// crossfades when only the view changes, so each change says what happened.
+const EASE_OUT = [0.23, 1, 0.32, 1];
+const scheduleMotion = {
+  enter: (dir) => ({ opacity: 0, transform: `translateX(${dir * 24}px)` }),
+  center: { opacity: 1, transform: "translateX(0px)", transition: { duration: 0.22, ease: EASE_OUT } },
+  exit: (dir) => ({ opacity: 0, transform: `translateX(${dir * -24}px)`, transition: { duration: 0.1, ease: EASE_OUT } }),
+};
 
 // Same key for a booking whether it comes from the grid or the pass list.
 const bookingKey = (b) => String(b.rowIndex ?? `${b.room}-${b.start}-${b.end}`);
@@ -75,6 +86,9 @@ export default function AvailabilityPage() {
   const [now, setNow] = useState(currentNow);
   const [date, setDate] = useState(() => currentNow().date);
   const [view, setView] = useState("day");
+  const [direction, setDirection] = useState(0); // -1 earlier, 1 later, 0 view change
+  // Motion would snap the slide rather than skip it, so zero it out: crossfade only.
+  const slide = useReducedMotion() ? 0 : direction;
   const [reservations, setReservations] = useState([]);
   const [status, setStatus] = useState("loading"); // loading | ready | error
   const [updatedAt, setUpdatedAt] = useState(null);
@@ -146,6 +160,16 @@ export default function AvailabilityPage() {
     onSelectGap: (room, gap) => pickSlot({ room, date, start: gap.start, end: Math.min(gap.end, gap.start + 60) }),
   };
 
+  function goTo(next) {
+    setDirection(next > date ? 1 : next < date ? -1 : 0);
+    setDate(next);
+  }
+
+  function changeView(next) {
+    setDirection(0);
+    setView(next);
+  }
+
   function pickSlot({ room, date: slotDate, start, end }) {
     if (!room.capacity) return; // a room name the app doesn't know can't be booked
     if (isAdmin) {
@@ -169,18 +193,18 @@ export default function AvailabilityPage() {
           <button
             type="button"
             aria-label={view === "week" ? "Previous week" : "Previous day"}
-            onClick={() => setDate(addDays(date, -step))}
+            onClick={() => goTo(addDays(date, -step))}
             className="lg-btn lg-btn-secondary lg-btn-icon"
           >
             <ChevronLeft aria-hidden="true" className="size-5" strokeWidth={2} />
           </button>
-          <button type="button" onClick={() => setDate(now.date)} className="lg-btn lg-btn-secondary">
+          <button type="button" onClick={() => goTo(now.date)} className="lg-btn lg-btn-secondary">
             Today
           </button>
           <button
             type="button"
             aria-label={view === "week" ? "Next week" : "Next day"}
-            onClick={() => setDate(addDays(date, step))}
+            onClick={() => goTo(addDays(date, step))}
             className="lg-btn lg-btn-secondary lg-btn-icon"
           >
             <ChevronRight aria-hidden="true" className="size-5" strokeWidth={2} />
@@ -190,17 +214,11 @@ export default function AvailabilityPage() {
             id="availability-go-to"
             type="date"
             value={date}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
+            onChange={(e) => e.target.value && goTo(e.target.value)}
             className="lg-input w-44"
           />
         </div>
-        <div role="group" aria-label="View" className="lg-segmented">
-          {VIEWS.map((v) => (
-            <button key={v.id} type="button" aria-pressed={view === v.id} onClick={() => setView(v.id)}>
-              {v.label}
-            </button>
-          ))}
-        </div>
+        <GlassSegmented label="View" options={VIEWS} value={view} onChange={changeView} />
         {isAdmin && (
           <button
             type="button"
@@ -242,55 +260,68 @@ export default function AvailabilityPage() {
         </div>
       )}
 
-      {status === "loading" && reservations.length === 0 ? (
-        <div className="lg-sheet flex flex-col gap-3 p-6" aria-hidden="true">
-          <div className="h-16 animate-pulse rounded-[14px] bg-[var(--lg-line)] motion-reduce:animate-none" />
-          <div className="h-16 animate-pulse rounded-[14px] bg-[var(--lg-line)] motion-reduce:animate-none" />
-        </div>
-      ) : view === "day" ? (
-        <>
-          {isPast && <p className="px-1 text-[15px] lg-muted">This day has passed. Bookings are shown for reference.</p>}
-          {!isPast && dayBookings.length === 0 && status === "ready" && (
-            <div className="lg-pass flex flex-wrap items-center gap-6 p-6">
-              <Image src="/brand/glass-pass-empty.webp" alt="" width={140} height={140} className="rounded-2xl" />
-              <div className="min-w-0 max-w-prose">
-                <h2 className="lg-title">Both rooms are free all day</h2>
-                <p className="mt-1 lg-muted">Pick a free block below to {isAdmin ? "book it" : "request it"}.</p>
+      <AnimatePresence mode="wait" initial={false} custom={slide}>
+        <motion.div
+          key={view === "find" ? "find" : `${view}-${view === "week" ? weekStart : date}`}
+          custom={slide}
+          variants={scheduleMotion}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          className="flex min-w-0 flex-col gap-4"
+        >
+          {status === "loading" && reservations.length === 0 ? (
+            <div className="lg-sheet flex flex-col gap-3 p-6" aria-hidden="true">
+              <div className="h-16 animate-pulse rounded-[14px] bg-[var(--lg-line)] motion-reduce:animate-none" />
+              <div className="h-16 animate-pulse rounded-[14px] bg-[var(--lg-line)] motion-reduce:animate-none" />
+            </div>
+          ) : view === "day" ? (
+            <>
+              {isPast && <p className="px-1 text-[15px] lg-muted">This day has passed. Bookings are shown for reference.</p>}
+              {!isPast && dayBookings.length === 0 && status === "ready" && (
+                <div className="lg-pass flex flex-wrap items-center gap-6 p-6">
+                  <Image src="/brand/glass-pass-empty.webp" alt="" width={140} height={140} className="rounded-2xl" />
+                  <div className="min-w-0 max-w-prose">
+                    <h2 className="lg-title">Both rooms are free all day</h2>
+                    <p className="mt-1 lg-muted">Pick a free block below to {isAdmin ? "book it" : "request it"}.</p>
+                  </div>
+                </div>
+              )}
+              <div className={showPassStack ? "grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]" : "hidden md:block"}>
+                <div className="min-w-0">
+                  <DayGrid {...dayProps} />
+                </div>
+                {showPassStack && (
+                  <PassStack
+                    passes={passes}
+                    frontKey={frontKey}
+                    onFront={setFrontKey}
+                    onOpenDetails={setSelected}
+                    onEmail={setEmailTarget}
+                    dateLabel={new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", day: "numeric", month: "short" })}
+                  />
+                )}
               </div>
-            </div>
+              <div className="md:hidden">
+                <DayAgenda {...dayProps} />
+              </div>
+            </>
+          ) : view === "week" ? (
+            <WeekGrid
+              reservations={reservations}
+              weekStart={weekStart}
+              now={now}
+              onOpenDay={(d) => {
+                setDirection(0);
+                setDate(d);
+                setView("day");
+              }}
+            />
+          ) : (
+            <FindTime reservations={reservations} now={now} canAct={status === "ready"} isAdmin={isAdmin} onPick={pickSlot} />
           )}
-          <div className={showPassStack ? "grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]" : "hidden md:block"}>
-            <div className="min-w-0">
-              <DayGrid {...dayProps} />
-            </div>
-            {showPassStack && (
-              <PassStack
-                passes={passes}
-                frontKey={frontKey}
-                onFront={setFrontKey}
-                onOpenDetails={setSelected}
-                onEmail={setEmailTarget}
-                dateLabel={new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", day: "numeric", month: "short" })}
-              />
-            )}
-          </div>
-          <div className="md:hidden">
-            <DayAgenda {...dayProps} />
-          </div>
-        </>
-      ) : view === "week" ? (
-        <WeekGrid
-          reservations={reservations}
-          weekStart={weekStart}
-          now={now}
-          onOpenDay={(d) => {
-            setDate(d);
-            setView("day");
-          }}
-        />
-      ) : (
-        <FindTime reservations={reservations} now={now} canAct={status === "ready"} isAdmin={isAdmin} onPick={pickSlot} />
-      )}
+        </motion.div>
+      </AnimatePresence>
 
       {showLogin && (
         <AdminLoginModal
@@ -301,7 +332,15 @@ export default function AvailabilityPage() {
           }}
         />
       )}
-      {requestSlot && <RequestSlotDialog slot={requestSlot} onClose={() => setRequestSlot(null)} />}
+      <AnimatePresence>
+        {requestSlot && (
+          <RequestSlotDialog
+            key={`${requestSlot.room.value}-${requestSlot.date}-${requestSlot.start}`}
+            slot={requestSlot}
+            onClose={() => setRequestSlot(null)}
+          />
+        )}
+      </AnimatePresence>
       {bookingSlot && (
         <BookingModal
           initial={bookingSlot}

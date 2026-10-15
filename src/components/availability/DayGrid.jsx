@@ -99,10 +99,17 @@ export default function DayGrid({ rooms, bookings, hours, now, notBefore, canAct
                     disabled={!canAct}
                     onClick={() => onSelectGap(room, gap)}
                     aria-label={`${room.label}, free ${formatRange(gap.start, gap.end)}${canAct ? `. ${gapVerb} this time` : ""}`}
-                    className="absolute top-3 flex flex-col items-start justify-center overflow-hidden rounded-[14px] border-2 border-dashed border-[var(--lg-free)] bg-[var(--lg-free-soft)] px-3 text-left text-[var(--lg-ink)] hover:bg-[var(--lg-sheet-fill)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="lg-press absolute top-3 flex flex-col items-start justify-center overflow-hidden rounded-[14px] border-2 border-dashed border-[var(--lg-free)] bg-[var(--lg-free-soft)] px-3 text-left text-[var(--lg-ink)] hover:bg-[var(--lg-sheet-fill)] disabled:cursor-not-allowed disabled:opacity-50"
                     style={{ ...span(gap.start, gap.end, hours), height: LANE_HEIGHT - 12 }}
                   >
-                    <span className="text-[14px] font-bold text-[var(--lg-free)]">Free</span>
+                    <span className="flex items-baseline gap-2 whitespace-nowrap">
+                      <span className="text-[14px] font-bold text-[var(--lg-free)]">Free</span>
+                      {canAct && (
+                        <span aria-hidden="true" className="lg-gap-cta text-[13px] font-semibold">
+                          {gapVerb} &rsaquo;
+                        </span>
+                      )}
+                    </span>
                     <span className="whitespace-nowrap text-[13px] lg-num">
                       {gap.end - gap.start <= 90 ? formatCompactRange(gap.start, gap.end) : formatRange(gap.start, gap.end)}
                     </span>
@@ -114,7 +121,7 @@ export default function DayGrid({ rooms, bookings, hours, now, notBefore, canAct
                     type="button"
                     onClick={() => onSelectBooking(b)}
                     aria-label={`${b.eventName}, ${room.label}, ${formatRange(b.start, b.end)}${b.status === "pending" ? ", pending" : ""}${b.conflict ? ", overlaps another booking" : ""}`}
-                    className={`absolute z-10 flex flex-col items-start justify-center gap-0.5 overflow-hidden rounded-[14px] border px-3 text-left ${blockTone(b)}`}
+                    className={`lg-press absolute z-10 flex flex-col items-start justify-center gap-0.5 overflow-hidden rounded-[14px] border px-3 text-left ${blockTone(b)}`}
                     style={{ ...span(b.start, b.end, hours), top: 12 + b.lane * LANE_HEIGHT, height: LANE_HEIGHT - 12 }}
                   >
                     <span className="flex w-full items-center gap-2">
