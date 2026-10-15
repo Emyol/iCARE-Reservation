@@ -276,8 +276,15 @@
     background: transparent;
     color: var(--lg-ink);
     font: 600 14px/1 var(--lg-font);
+    white-space: nowrap;
     cursor: pointer;
     transition: color 200ms var(--lg-ease-out);
+  }
+
+  @media (max-width: 480px) {
+    .lg-segmented button {
+      padding: 0 10px;
+    }
   }
 
   /* The green pill is a separate element (Segmented) that slides between

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 
 /**
@@ -11,12 +11,23 @@ import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
  * - onClose: close the modal
  * - onSent: callback when email is sent successfully
  */
-export default function EmailModal({ reservation, onClose, onSent }) {
+/**
+ * `initialType` preselects the email; `keeping` is the booking that keeps the
+ * room when this one is declined, so the email names the right overlap.
+ */
+export default function EmailModal({ reservation, onClose, onSent, initialType = "auto", keeping = null }) {
   const dialogRef = useAccessibleDialog(onClose);
-  const [emailType, setEmailType] = useState("auto");
+  const [emailType, setEmailType] = useState(initialType);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(null);
+  const closeRef = useRef(null);
+
+  // Sending swaps the Send button for the result, so move focus to Close
+  // rather than letting it drop to the page behind the dialog.
+  useEffect(() => {
+    if (success) closeRef.current?.focus();
+  }, [success]);
 
   const recipientEmail = reservation?.recipientEmail || reservation?.email || "";
 
@@ -38,6 +49,7 @@ export default function EmailModal({ reservation, onClose, onSent }) {
         body: JSON.stringify({
           reservation,
           emailType,
+          conflictWithRow: emailType === "conflict" ? keeping?.rowIndex : undefined,
         }),
       });
 
@@ -139,6 +151,13 @@ export default function EmailModal({ reservation, onClose, onSent }) {
               </p>
             )}
           </div>
+
+          {keeping && emailType === "conflict" && (
+            <p className="rounded-[14px] border border-[var(--lg-line)] bg-[var(--lg-chrome-fill)] p-3 text-[14px]">
+              <strong>{keeping.eventName}</strong> keeps the room. This request gets the room-not-available email and
+              stops holding the time.
+            </p>
+          )}
 
           {/* Recipient */}
           <div className="flex flex-col gap-2">
@@ -246,6 +265,7 @@ export default function EmailModal({ reservation, onClose, onSent }) {
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 pb-6 pt-2">
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             disabled={loading}
