@@ -78,9 +78,10 @@ export default function ActivityPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
+              aria-label="Back to dashboard"
               className="text-slate-400 hover:text-white transition-colors"
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 arrow_back
               </span>
             </Link>
@@ -105,11 +106,12 @@ export default function ActivityPage() {
                 {["all", "CREATE", "EDIT", "DELETE"].map((f) => (
                   <button
                     key={f}
+                    aria-pressed={filter === f}
                     onClick={() => setFilter(f)}
                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                       filter === f
                         ? "bg-white/10 text-white shadow-sm"
-                        : "text-slate-500 hover:text-slate-300"
+                        : "text-slate-400 hover:text-slate-300"
                     }`}
                   >
                     {f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
@@ -121,7 +123,7 @@ export default function ActivityPage() {
 
           {!isAdmin && (
             <div className="glass-panel/60 rounded-xl border border-amber-500/20 p-8 text-center">
-              <span className="material-symbols-outlined text-amber-400 text-4xl mb-3 block">
+              <span aria-hidden="true" className="material-symbols-outlined text-amber-400 text-4xl mb-3 block">
                 shield
               </span>
               <p className="text-amber-400 font-semibold text-sm">
@@ -152,10 +154,10 @@ export default function ActivityPage() {
 
           {isAdmin && !loading && displayLogs.length === 0 && (
             <div className="glass-panel/60 rounded-xl border border-white/5 p-12 text-center">
-              <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">
+              <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-4xl mb-3 block">
                 history
               </span>
-              <p className="text-slate-500 text-sm font-medium">
+              <p className="text-slate-400 text-sm font-medium">
                 No activity recorded yet
               </p>
             </div>
@@ -179,7 +181,7 @@ export default function ActivityPage() {
                     <div
                       className={`size-9 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0 mt-0.5`}
                     >
-                      <span
+                      <span aria-hidden="true"
                         className={`material-symbols-outlined text-[18px] ${cfg.color}`}
                       >
                         {cfg.icon}
@@ -192,11 +194,11 @@ export default function ActivityPage() {
                         >
                           {cfg.label}
                         </span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-400">
                           by {log.admin}
                         </span>
                         {log.targetRow && (
-                          <span className="text-xs text-slate-600">
+                          <span className="text-xs text-slate-400">
                             Row #{log.targetRow}
                           </span>
                         )}
@@ -206,7 +208,7 @@ export default function ActivityPage() {
                           {log.details}
                         </p>
                       )}
-                      <p className="text-[10px] text-slate-500 mt-1">
+                      <p className="text-xs text-slate-400 mt-1">
                         {log.timestamp}
                       </p>
                     </div>
@@ -218,7 +220,7 @@ export default function ActivityPage() {
         </div>
 
         <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-500 text-xs">
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} iCARE Room Reservation System — FEU
             Institute of Technology
           </p>

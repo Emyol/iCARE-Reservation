@@ -6,6 +6,7 @@ import AdminLoginModal from "@/components/AdminLoginModal";
 import AvailabilityChecker from "@/components/AvailabilityChecker";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import { requestFormUrl } from "@/lib/requestForm";
 
 const ROOMS = [
   {
@@ -59,14 +60,21 @@ export default function RoomsPage() {
   const { isAdmin, login, logout } = useAdmin();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [reservations, setReservations] = useState([]);
+  // "loading" | "ready" | "error": the checker must not report a room as
+  // free when the schedule never loaded.
+  const [dataStatus, setDataStatus] = useState("loading");
+  const formUrl = requestFormUrl();
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/reservations", { cache: "no-store" });
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
       const data = await res.json();
       setReservations(data);
-    } catch {}
+      setDataStatus("ready");
+    } catch {
+      setDataStatus("error");
+    }
   }, []);
 
   useEffect(() => {
@@ -92,10 +100,11 @@ export default function RoomsPage() {
         <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:px-8 sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <Link
-              href="/"
+              href="/dashboard"
+              aria-label="Back to dashboard"
               className="text-slate-400 hover:text-white transition-colors"
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 arrow_back
               </span>
             </Link>
@@ -128,7 +137,7 @@ export default function RoomsPage() {
                     <div
                       className={`size-12 rounded-lg ${c.bg} flex items-center justify-center shrink-0`}
                     >
-                      <span className={`material-symbols-outlined ${c.icon}`}>
+                      <span aria-hidden="true" className={`material-symbols-outlined ${c.icon}`}>
                         {room.icon}
                       </span>
                     </div>
@@ -163,10 +172,10 @@ export default function RoomsPage() {
             })}
           </div>
 
-          <AvailabilityChecker reservations={reservations} />
+          <AvailabilityChecker reservations={reservations} dataStatus={dataStatus} />
 
           <div className="glass-panel/60 rounded-xl border border-white/5 p-6 flex items-start gap-4">
-            <span className="material-symbols-outlined text-[#0f49bd] shrink-0 mt-0.5">
+            <span aria-hidden="true" className="material-symbols-outlined text-[#0f49bd] shrink-0 mt-0.5">
               info
             </span>
             <div>
@@ -177,17 +186,30 @@ export default function RoomsPage() {
                 Submit a reservation request through the iCARE Google Form.
                 Requests are reviewed and a confirmation email will be sent once
                 approved. Admins may also book directly from the{" "}
-                <Link href="/" className="text-teal-400 hover:underline">
+                <Link href="/dashboard" className="text-teal-400 hover:underline">
                   Dashboard
                 </Link>
                 .
               </p>
+              {formUrl && (
+                <a
+                  href={formUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 mt-3 px-4 py-2 text-sm font-semibold text-white auro-button rounded-lg"
+                >
+                  Open the request form
+                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                    open_in_new
+                  </span>
+                </a>
+              )}
             </div>
           </div>
         </div>
 
         <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-500 text-xs">
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} iCARE Room Reservation System — FEU
             Institute of Technology
           </p>

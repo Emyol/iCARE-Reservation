@@ -33,11 +33,12 @@ export default function SchedulePage() {
     }
   }, []);
 
+  // Refetch when admin state changes: the API returns full rows only to admins.
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, isAdmin]);
 
   // Transform reservations into calendar data format
   const calendarData = useMemo(() => {
@@ -113,10 +114,11 @@ export default function SchedulePage() {
         <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:px-8 sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <Link
-              href="/"
+              href="/dashboard"
+              aria-label="Back to dashboard"
               className="text-slate-400 hover:text-white transition-colors"
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 arrow_back
               </span>
             </Link>
@@ -145,7 +147,7 @@ export default function SchedulePage() {
           {/* Selected Day Reservations */}
           <div>
             <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-teal-400">
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-teal-400">
                 event
               </span>
               {selectedDate.toLocaleDateString("en-US", {
@@ -154,7 +156,7 @@ export default function SchedulePage() {
                 day: "numeric",
                 year: "numeric",
               })}
-              <span className="text-slate-600 font-normal ml-1">
+              <span className="text-slate-400 font-normal ml-1">
                 ({filtered.length} reservation{filtered.length !== 1 ? "s" : ""}
                 )
               </span>
@@ -168,10 +170,10 @@ export default function SchedulePage() {
               </div>
             ) : filtered.length === 0 ? (
               <div className="glass-panel rounded-xl border border-white/5 p-12 text-center">
-                <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">
+                <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-4xl mb-3 block">
                   event_busy
                 </span>
-                <p className="text-slate-500 text-sm font-medium">
+                <p className="text-slate-400 text-sm font-medium">
                   No reservations on this date
                 </p>
               </div>
@@ -182,15 +184,9 @@ export default function SchedulePage() {
                   .map((r, i) => {
                     const isAVR = r.room.toLowerCase().includes("audio-visual");
                     return (
-                      <div
+                      <div role="presentation"
                         key={i}
-                        role="button"
-                        tabIndex={0}
                         onClick={() => setSelectedReservation(r)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ")
-                            setSelectedReservation(r);
-                        }}
                         className={`w-full text-left glass-panel rounded-xl border p-4 flex items-center gap-4 transition-all hover:scale-[1.01] cursor-pointer ${
                           isAVR
                             ? "border-emerald-500/20 hover:border-emerald-500/40"
@@ -202,7 +198,7 @@ export default function SchedulePage() {
                             isAVR ? "bg-emerald-500/10" : "bg-blue-500/10"
                           }`}
                         >
-                          <span
+                          <span aria-hidden="true"
                             className={`material-symbols-outlined text-[20px] ${
                               isAVR ? "text-emerald-400" : "text-blue-400"
                             }`}
@@ -211,9 +207,17 @@ export default function SchedulePage() {
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">
+                          {/* The card is clickable by mouse; this button is the keyboard and screen-reader target. */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedReservation(r);
+                            }}
+                            className="block max-w-full text-left text-sm font-semibold text-white truncate"
+                          >
                             {r.eventName}
-                          </p>
+                          </button>
                           <p className="text-xs text-slate-400 truncate">
                             {r.room}
                           </p>
@@ -228,7 +232,7 @@ export default function SchedulePage() {
                               {formatTime(r.endTime)}
                             </p>
                             {r.fullName && (
-                              <p className="text-xs text-slate-500 mt-0.5">
+                              <p className="text-xs text-slate-400 mt-0.5">
                                 {r.fullName}
                               </p>
                             )}
@@ -249,8 +253,13 @@ export default function SchedulePage() {
                                   ? "Email already sent — click to resend"
                                   : "Send email to reservant"
                               }
+                              aria-label={
+                                r.emailSent
+                                  ? `Resend email for ${r.eventName}`
+                                  : `Send email for ${r.eventName}`
+                              }
                             >
-                              <span className="material-symbols-outlined text-[16px]">
+                              <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
                                 {r.emailSent ? "mark_email_read" : "mail"}
                               </span>
                             </button>
@@ -265,7 +274,7 @@ export default function SchedulePage() {
         </div>
 
         <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-500 text-xs">
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} iCARE Room Reservation System — FEU
             Institute of Technology
           </p>

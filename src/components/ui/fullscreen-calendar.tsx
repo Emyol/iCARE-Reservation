@@ -60,6 +60,8 @@ function getEventColor(event: CalendarEvent) {
       badge: "border-emerald-500/20 bg-emerald-500/10",
       text: "text-emerald-400",
       label: "text-emerald-300",
+      shape: "rounded-full",
+      room: "AVR",
     };
   }
   return {
@@ -67,6 +69,8 @@ function getEventColor(event: CalendarEvent) {
     badge: "border-blue-500/20 bg-blue-500/10",
     text: "text-blue-400",
     label: "text-blue-300",
+    shape: "rounded-[2px]",
+    room: "Training Room",
   };
 }
 
@@ -101,6 +105,19 @@ export function FullScreenCalendar({
   function goToToday() {
     setCurrentMonth(format(today, "MMM-yyyy"));
     handleDaySelect(today);
+  }
+
+  function dayLabel(day: Date) {
+    const events = data.find((d) => isSameDay(d.day, day))?.events || [];
+    const counts = events.reduce<Record<string, number>>((acc, event) => {
+      const room = getEventColor(event).room;
+      acc[room] = (acc[room] || 0) + 1;
+      return acc;
+    }, {});
+    const summary = Object.entries(counts)
+      .map(([room, n]) => `${n} ${room}`)
+      .join(", ");
+    return `${format(day, "EEEE, MMMM d")}${summary ? `: ${events.length} reservation${events.length === 1 ? "" : "s"} (${summary})` : ": no reservations"}`;
   }
 
   function handleDaySelect(day: Date) {
@@ -178,13 +195,13 @@ export function FullScreenCalendar({
           />
 
           {/* Legend */}
-          <div className="flex items-center gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-4 text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-full bg-emerald-500" />
               AVR
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-blue-500" />
+              <span className="size-2.5 rounded-[2px] bg-blue-500" />
               Training
             </span>
           </div>
@@ -209,7 +226,7 @@ export function FullScreenCalendar({
           {/* Desktop Grid */}
           <div className="hidden w-full border-x border-white/10 lg:grid lg:grid-cols-7 lg:grid-rows-5">
             {days.map((day, dayIdx) => (
-              <div
+              <div role="presentation"
                 key={dayIdx}
                 onClick={() => handleDaySelect(day)}
                 className={cn(
@@ -217,7 +234,7 @@ export function FullScreenCalendar({
                   !isEqual(day, selectedDay) &&
                     !isToday(day) &&
                     !isSameMonth(day, firstDayCurrentMonth) &&
-                    "bg-white/[0.01] text-slate-600",
+                    "bg-white/[0.01] text-slate-400",
                   "relative flex cursor-pointer flex-col border-b border-r border-white/10 transition-colors",
                   isEqual(day, selectedDay) &&
                     "bg-purple-500/10 border-purple-500/20",
@@ -227,17 +244,23 @@ export function FullScreenCalendar({
                 <header className="flex items-center justify-between p-2.5">
                   <button
                     type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDaySelect(day);
+                    }}
+                    aria-label={dayLabel(day)}
+                    aria-pressed={isEqual(day, selectedDay)}
                     className={cn(
                       "flex h-7 w-7 items-center justify-center rounded-full text-xs transition-colors hover:border hover:border-white/20",
                       isEqual(day, selectedDay) &&
                         isToday(day) &&
-                        "border-none bg-teal-500 font-bold text-white",
+                        "border-none bg-teal-400 font-bold text-slate-950",
                       isEqual(day, selectedDay) &&
                         !isToday(day) &&
-                        "bg-purple-500 font-semibold text-white",
+                        "bg-purple-700 font-semibold text-white",
                       !isEqual(day, selectedDay) &&
                         isToday(day) &&
-                        "bg-teal-500 font-bold text-white",
+                        "bg-teal-400 font-bold text-slate-950",
                       !isEqual(day, selectedDay) &&
                         !isToday(day) &&
                         isSameMonth(day, firstDayCurrentMonth) &&
@@ -245,7 +268,7 @@ export function FullScreenCalendar({
                       !isEqual(day, selectedDay) &&
                         !isToday(day) &&
                         !isSameMonth(day, firstDayCurrentMonth) &&
-                        "text-slate-600",
+                        "text-slate-400",
                     )}
                   >
                     <time dateTime={format(day, "yyyy-MM-dd")}>
@@ -264,35 +287,44 @@ export function FullScreenCalendar({
                         {dateEvents.events.slice(0, 2).map((event) => {
                           const color = getEventColor(event);
                           return (
-                            <div
+                            <button
+                              type="button"
                               key={event.id}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onEventClick?.(event);
                               }}
+                              aria-label={`${event.name}, ${color.room}, ${event.time}`}
                               className={cn(
-                                "flex flex-col items-start gap-0.5 rounded-lg border p-1.5 text-xs leading-tight backdrop-blur-sm transition-colors hover:bg-white/5",
+                                "flex w-full flex-col items-start gap-0.5 rounded-lg border p-1.5 text-left text-xs leading-tight backdrop-blur-sm transition-colors hover:bg-white/5",
                                 color.badge,
                               )}
                             >
-                              <p
+                              <span
                                 className={cn(
-                                  "font-medium leading-none truncate w-full",
+                                  "block font-medium leading-none truncate w-full",
                                   color.label,
                                 )}
                               >
                                 {event.name}
-                              </p>
-                              <p className="leading-none text-slate-500">
+                              </span>
+                              <span className="block leading-none text-slate-400">
                                 {event.time}
-                              </p>
-                            </div>
+                              </span>
+                            </button>
                           );
                         })}
                         {dateEvents.events.length > 2 && (
-                          <div className="text-xs text-slate-500">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDaySelect(day);
+                            }}
+                            className="text-xs text-slate-400 hover:text-white underline-offset-2 hover:underline"
+                          >
                             + {dateEvents.events.length - 2} more
-                          </div>
+                          </button>
                         )}
                       </div>
                     ))}
@@ -308,6 +340,8 @@ export function FullScreenCalendar({
                 onClick={() => handleDaySelect(day)}
                 key={dayIdx}
                 type="button"
+                aria-label={dayLabel(day)}
+                aria-pressed={isEqual(day, selectedDay)}
                 className={cn(
                   "flex h-14 flex-col border-b border-r border-white/10 px-3 py-2 transition-colors hover:bg-white/5 focus:z-10",
                   isEqual(day, selectedDay) && "bg-purple-500/10",
@@ -318,7 +352,7 @@ export function FullScreenCalendar({
                   !isEqual(day, selectedDay) &&
                     !isToday(day) &&
                     !isSameMonth(day, firstDayCurrentMonth) &&
-                    "text-slate-600",
+                    "text-slate-400",
                   (isEqual(day, selectedDay) || isToday(day)) &&
                     "font-semibold",
                 )}
@@ -329,13 +363,13 @@ export function FullScreenCalendar({
                     "ml-auto flex size-6 items-center justify-center rounded-full text-xs",
                     isEqual(day, selectedDay) &&
                       isToday(day) &&
-                      "bg-teal-500 text-white",
+                      "bg-teal-400 text-slate-950",
                     isEqual(day, selectedDay) &&
                       !isToday(day) &&
-                      "bg-purple-500 text-white",
+                      "bg-purple-700 text-white",
                     !isEqual(day, selectedDay) &&
                       isToday(day) &&
-                      "bg-teal-500 text-white",
+                      "bg-teal-400 text-slate-950",
                   )}
                 >
                   {format(day, "d")}
@@ -355,7 +389,8 @@ export function FullScreenCalendar({
                               <span
                                 key={event.id}
                                 className={cn(
-                                  "mx-0.5 mt-1 h-1.5 w-1.5 rounded-full",
+                                  "mx-0.5 mt-1 h-1.5 w-1.5",
+                                  color.shape,
                                   color.dot,
                                 )}
                               />

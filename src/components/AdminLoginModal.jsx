@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 
 /**
  * Admin Login Modal
@@ -8,6 +9,7 @@ import { useState } from "react";
  * On success, calls onLogin(adminInfo) to update parent state.
  */
 export default function AdminLoginModal({ onClose, onLogin }) {
+  const dialogRef = useAccessibleDialog(onClose);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -52,20 +54,20 @@ export default function AdminLoginModal({ onClose, onLogin }) {
   }
 
   return (
-    <div
+    <div role="presentation"
       className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-overlay"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="glass-card w-full max-w-[440px] rounded-xl shadow-2xl modal-content">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="login-title" tabIndex={-1} className="relative bg-[#192233] border border-slate-800 w-full max-w-[440px] rounded-xl shadow-2xl modal-content">
         {/* Header */}
         <div className="p-6 text-center space-y-3">
           <div className="w-12 h-12 bg-[#0f49bd]/20 rounded-full flex items-center justify-center mx-auto">
-            <span className="material-symbols-outlined text-[#0f49bd] text-2xl">
+            <span aria-hidden="true" className="material-symbols-outlined text-[#0f49bd] text-2xl">
               admin_panel_settings
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Welcome back</h2>
+            <h2 id="login-title" className="text-xl font-bold text-white">Welcome back</h2>
             <p className="text-slate-400 text-sm mt-1">
               Enter your admin credentials to manage reservations.
             </p>
@@ -76,20 +78,21 @@ export default function AdminLoginModal({ onClose, onLogin }) {
         <form onSubmit={handleSubmit} className="px-6 pb-2 space-y-4">
           {/* Username */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-300">
+            <label htmlFor="login-username" className="block text-sm font-medium text-slate-300">
               Username
             </label>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+              <span aria-hidden="true" className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 person
               </span>
               <input
                 type="text"
+                id="login-username"
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd] focus:border-transparent outline-none transition-all"
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd] focus:border-transparent outline-none transition-all"
                 placeholder="Enter username"
-                autoFocus
                 disabled={loading}
               />
             </div>
@@ -97,27 +100,31 @@ export default function AdminLoginModal({ onClose, onLogin }) {
 
           {/* Password */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-300">
+            <label htmlFor="login-password" className="block text-sm font-medium text-slate-300">
               Password
             </label>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+              <span aria-hidden="true" className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 lock
               </span>
               <input
                 type={showPassword ? "text" : "password"}
+                id="login-password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-12 py-3.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd] focus:border-transparent outline-none transition-all"
+                className="w-full pl-12 pr-12 py-3.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd] focus:border-transparent outline-none transition-all"
                 placeholder="••••••••"
                 disabled={loading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0f49bd] transition-colors"
               >
-                <span className="material-symbols-outlined text-xl">
+                <span aria-hidden="true" className="material-symbols-outlined text-xl">
                   {showPassword ? "visibility_off" : "visibility"}
                 </span>
               </button>
@@ -126,8 +133,8 @@ export default function AdminLoginModal({ onClose, onLogin }) {
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <span className="material-symbols-outlined text-red-400 text-lg">
+            <div role="alert" className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-lg">
                 error
               </span>
               <p className="text-sm text-red-400">{error}</p>
@@ -138,7 +145,7 @@ export default function AdminLoginModal({ onClose, onLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#0f49bd] hover:bg-[#0f49bd]/90 text-white font-bold py-4 rounded-lg transition-all glow-button flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full bg-[#0f49bd] hover:bg-[#0f49bd]/90 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
@@ -167,7 +174,7 @@ export default function AdminLoginModal({ onClose, onLogin }) {
             ) : (
               <>
                 <span>Sign In to Dashboard</span>
-                <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">
+                <span aria-hidden="true" className="material-symbols-outlined transition-transform group-hover:translate-x-1">
                   arrow_forward
                 </span>
               </>
@@ -182,12 +189,12 @@ export default function AdminLoginModal({ onClose, onLogin }) {
               <div className="w-full border-t border-slate-700" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-transparent px-2 text-slate-500">
+              <span className="bg-transparent px-2 text-slate-400">
                 Security Notice
               </span>
             </div>
           </div>
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-slate-400">
             This is a secure system. Authorized access only.
           </p>
         </div>
@@ -195,9 +202,10 @@ export default function AdminLoginModal({ onClose, onLogin }) {
         {/* Close Button */}
         <button
           onClick={onClose}
+          aria-label="Close"
           className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition-colors"
         >
-          <span className="material-symbols-outlined">close</span>
+          <span aria-hidden="true" className="material-symbols-outlined">close</span>
         </button>
       </div>
     </div>

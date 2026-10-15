@@ -26,11 +26,12 @@ export default function ConflictsPage() {
     }
   }, []);
 
+  // Refetch when admin state changes: the API returns full rows only to admins.
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, isAdmin]);
 
   function handleLogin(adminInfo) {
     login(adminInfo);
@@ -103,9 +104,10 @@ export default function ConflictsPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
+              aria-label="Back to dashboard"
               className="text-slate-400 hover:text-white transition-colors"
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 arrow_back
               </span>
             </Link>
@@ -127,13 +129,13 @@ export default function ConflictsPage() {
 
           {!isAdmin && (
             <div className="glass-panel/60 rounded-xl border border-amber-500/20 p-8 text-center">
-              <span className="material-symbols-outlined text-amber-400 text-4xl mb-3 block">
+              <span aria-hidden="true" className="material-symbols-outlined text-amber-400 text-4xl mb-3 block">
                 shield
               </span>
               <p className="text-amber-400 font-semibold text-sm">
                 Admin access required
               </p>
-              <p className="text-slate-500 text-xs mt-1">
+              <p className="text-slate-400 text-xs mt-1">
                 Log in as an admin to view schedule conflicts.
               </p>
               <button
@@ -161,13 +163,13 @@ export default function ConflictsPage() {
 
           {isAdmin && !loading && conflicts.length === 0 && (
             <div className="glass-panel/60 rounded-xl border border-emerald-500/20 p-12 text-center">
-              <span className="material-symbols-outlined text-emerald-400 text-5xl mb-3 block">
+              <span aria-hidden="true" className="material-symbols-outlined text-emerald-400 text-5xl mb-3 block">
                 check_circle
               </span>
               <p className="text-emerald-400 font-semibold text-lg">
                 No conflicts detected!
               </p>
-              <p className="text-slate-500 text-sm mt-1">
+              <p className="text-slate-400 text-sm mt-1">
                 All reservations are scheduled without overlaps.
               </p>
             </div>
@@ -176,7 +178,7 @@ export default function ConflictsPage() {
           {isAdmin && !loading && conflicts.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-red-400 text-[20px]">
+                <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-[20px]">
                   warning
                 </span>
                 <span className="text-sm font-semibold text-red-400">
@@ -208,7 +210,7 @@ export default function ConflictsPage() {
                     className="glass-panel/60 rounded-xl border border-red-500/20 overflow-hidden"
                   >
                     <div className="px-4 py-3 border-b border-red-500/10 bg-red-500/5 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-red-400 text-[18px]">
+                      <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-[18px]">
                         schedule
                       </span>
                       <span
@@ -236,16 +238,16 @@ export default function ConflictsPage() {
                           >
                             <div className="flex items-center gap-2 mb-1">
                               {hasPriority === true && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                  <span className="material-symbols-outlined text-[12px]">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                  <span aria-hidden="true" className="material-symbols-outlined text-[12px]">
                                     verified
                                   </span>
                                   Priority
                                 </span>
                               )}
                               {hasPriority === false && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-500/15 text-red-400 border border-red-500/30">
-                                  <span className="material-symbols-outlined text-[12px]">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-red-500/15 text-red-400 border border-red-500/30">
+                                  <span aria-hidden="true" className="material-symbols-outlined text-[12px]">
                                     schedule
                                   </span>
                                   Later Submission
@@ -263,12 +265,12 @@ export default function ConflictsPage() {
                               {formatTime(r.endTime)}
                             </p>
                             {r.fullName && (
-                              <p className="text-xs text-slate-500 mt-0.5">
+                              <p className="text-xs text-slate-400 mt-0.5">
                                 {r.fullName}
                               </p>
                             )}
                             <p
-                              className="text-[10px] text-slate-600 mt-1.5"
+                              className="text-xs text-slate-400 mt-1.5"
                               suppressHydrationWarning
                             >
                               Submitted: {formatTimestamp(r.timestamp)}
@@ -285,7 +287,7 @@ export default function ConflictsPage() {
         </div>
 
         <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-500 text-xs">
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} iCARE Room Reservation System — FEU
             Institute of Technology
           </p>

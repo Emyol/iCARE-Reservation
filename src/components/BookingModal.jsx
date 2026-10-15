@@ -1,47 +1,62 @@
 "use client";
 
 import { useState } from "react";
+import { ROOMS } from "@/lib/rooms";
+import { manilaNow, validateReservation } from "@/lib/reservationRules";
+import ConflictOverride from "@/components/ConflictOverride";
+import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 
-const ROOM_OPTIONS = [
-  {
-    value: "Audio-Visual Room / Enhancement Area (Capacity: 40)",
-    label: "Audio-Visual Room / Enhancement Area (Capacity: 40)",
-  },
-  {
-    value: "Individual Training / Small Group Discussion Room (Capacity: 10)",
-    label: "Individual Training / Small Group Discussion Room (Capacity: 10)",
-  },
-];
+const inputClass =
+  "w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all";
 
 /**
  * Manual Booking Modal
- * Sends POST /api/reservations with room, eventName, startTime, endTime.
- * On success, calls onBooked() to refresh data.
+ * Sends POST /api/reservations. Overlaps come back as 409; the admin can then
+ * save anyway with a reason. On success, calls onBooked() to refresh data.
  */
 export default function BookingModal({ onClose, onBooked }) {
+  const dialogRef = useAccessibleDialog(onClose);
+  const today = manilaNow().slice(0, 10);
   const [room, setRoom] = useState("");
   const [eventName, setEventName] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [date, setDate] = useState(today);
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [attendees, setAttendees] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [conflictInfo, setConflictInfo] = useState(null);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [conflicts, setConflicts] = useState(null);
+  const [override, setOverride] = useState(false);
+  const [reason, setReason] = useState("");
+  const [emailProblem, setEmailProblem] = useState(null);
+
+  const capacity = ROOMS.find((r) => r.value === room)?.capacity;
+
+  // A changed slot needs a fresh conflict check.
+  function changeSlot(setter) {
+    return (e) => {
+      setter(e.target.value);
+      setConflicts(null);
+      setOverride(false);
+    };
+  }
 
   function validate() {
     if (!room) return "Please select a room";
     if (!eventName.trim()) return "Please enter an event/professor name";
     if (!fullName.trim()) return "Please enter the booker's full name";
-    if (!startTime) return "Please select a start time";
-    if (!endTime) return "Please select an end time";
-
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    if (end <= start) return "End time must be after start time";
-
+    if (!date || !start || !end) return "Please choose a date, start time, and end time";
+    const check = validateReservation({
+      room,
+      eventName,
+      startTime: `${date}T${start}`,
+      endTime: `${date}T${end}`,
+      attendees,
+    });
+    if (!check.ok) return check.errors[0];
+    if (conflicts && override && !reason.trim()) return "Enter a reason for booking over the overlap";
     return null;
   }
 
@@ -64,11 +79,13 @@ export default function BookingModal({ onClose, onBooked }) {
         body: JSON.stringify({
           room,
           eventName: eventName.trim(),
-          startTime,
-          endTime,
+          startTime: `${date}T${start}`,
+          endTime: `${date}T${end}`,
           fullName: fullName.trim(),
           email: email.trim(),
           attendees: attendees.trim(),
+          override: Boolean(conflicts && override),
+          reason: reason.trim(),
         }),
       });
 
@@ -79,10 +96,15 @@ export default function BookingModal({ onClose, onBooked }) {
         return;
       }
 
+      if (res.status === 409 && data.needsOverride) {
+        setConflicts(data.conflicts || []);
+        setError("");
+        return;
+      }
+
       if (res.ok && data.success) {
-        if (data.conflict && data.conflict.hasPriority) {
-          setConflictInfo(data.conflict);
-          setBookingSuccess(true);
+        if (data.email && data.email.sent === false) {
+          setEmailProblem(data.email.error || "The confirmation email couldn't be sent.");
         } else {
           onBooked();
         }
@@ -97,16 +119,16 @@ export default function BookingModal({ onClose, onBooked }) {
   }
 
   return (
-    <div
+    <div role="presentation"
       className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-overlay"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#192233] w-full max-w-[520px] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col modal-content">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="booking-title" tabIndex={-1} className="bg-[#192233] w-full max-w-[520px] max-h-[92vh] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col modal-content">
         {/* Header */}
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-100">
+              <h2 id="booking-title" className="text-2xl font-bold text-slate-100">
                 Manual Room Booking
               </h2>
               <p className="text-slate-400 text-sm mt-1">
@@ -115,119 +137,62 @@ export default function BookingModal({ onClose, onBooked }) {
             </div>
             <button
               onClick={onClose}
+              aria-label="Close"
               className="text-slate-400 hover:text-slate-200 transition-colors"
             >
-              <span className="material-symbols-outlined">close</span>
+              <span aria-hidden="true" className="material-symbols-outlined">close</span>
             </button>
           </div>
         </div>
 
-        {bookingSuccess && conflictInfo ? (
+        {emailProblem ? (
           <div className="p-6 flex flex-col gap-5 overflow-y-auto">
-            {/* Success notice */}
             <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <span className="material-symbols-outlined text-emerald-400 text-2xl shrink-0">
+              <span aria-hidden="true" className="material-symbols-outlined text-emerald-400 text-2xl shrink-0">
                 check_circle
               </span>
-              <div>
-                <p className="text-sm font-semibold text-emerald-400">
-                  Booking Created Successfully
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  The reservation has been added to the schedule.
-                </p>
-              </div>
-            </div>
-
-            {/* Conflict warning with priority */}
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-amber-400">
-                  warning
-                </span>
-                <p className="text-sm font-semibold text-amber-400">
-                  Schedule Conflict — Priority Notice
-                </p>
-              </div>
-              <p className="text-xs text-slate-300 mb-3 leading-relaxed">
-                This booking overlaps with an existing reservation that has{" "}
-                <strong className="text-amber-300">scheduling priority</strong>{" "}
-                because it was submitted first. The conflicting reservation may
-                take precedence.
+              <p className="text-sm font-semibold text-emerald-400">
+                Booking saved to the schedule.
               </p>
-              <div className="p-3 bg-slate-800/60 rounded-lg border border-slate-700/50">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold mb-1.5">
-                  Existing Reservation (Priority)
-                </p>
-                <p className="text-sm font-semibold text-white">
-                  {conflictInfo.eventName}
-                </p>
-                <p
-                  className="text-xs text-slate-400 mt-1"
-                  suppressHydrationWarning
-                >
-                  {new Date(conflictInfo.startTime).toLocaleDateString(
-                    "en-US",
-                    { month: "short", day: "numeric", year: "numeric" },
-                  )}
-                  {" \u00B7 "}
-                  {new Date(conflictInfo.startTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                  {" – "}
-                  {new Date(conflictInfo.endTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-                {conflictInfo.fullName && (
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {conflictInfo.fullName}
-                  </p>
-                )}
-                {conflictInfo.timestamp && (
-                  <p
-                    className="text-[10px] text-indigo-400 mt-1.5"
-                    suppressHydrationWarning
-                  >
-                    Submitted: {conflictInfo.timestamp}
-                  </p>
-                )}
-              </div>
             </div>
-
+            <div role="alert" className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <p className="text-sm font-semibold text-amber-400">
+                No confirmation email was sent
+              </p>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                {emailProblem} Use the mail button on this booking to send it
+                once the problem is fixed.
+              </p>
+            </div>
             <button
               onClick={() => onBooked()}
-              className="w-full h-11 bg-[#0f49bd] hover:bg-[#0f49bd]/90 rounded-lg font-semibold text-white shadow-lg shadow-[#0f49bd]/20 transition-all flex items-center justify-center gap-2"
+              className="w-full h-11 bg-[#0f49bd] hover:bg-[#0f49bd]/90 rounded-lg font-semibold text-white transition-all"
             >
-              <span className="material-symbols-outlined text-xl">
-                done_all
-              </span>
-              Acknowledge & Close
+              Close
             </button>
           </div>
         ) : (
           <>
             {/* Form Body */}
-            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
+            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 overflow-y-auto">
               {/* Room Selection */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">
+                <label htmlFor="booking-room" className="text-sm font-medium text-slate-300">
                   Room Selection
                 </label>
                 <select
+                  id="booking-room"
                   value={room}
-                  onChange={(e) => setRoom(e.target.value)}
+                  onChange={changeSlot(setRoom)}
                   disabled={loading}
-                  className="custom-select w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all"
+                  className={`custom-select ${inputClass}`}
                 >
                   <option value="" disabled>
                     Select a room
                   </option>
-                  {ROOM_OPTIONS.map((opt) => (
+                  {ROOMS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {opt.value}
                     </option>
                   ))}
                 </select>
@@ -235,15 +200,16 @@ export default function BookingModal({ onClose, onBooked }) {
 
               {/* Professor / Event Name */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">
+                <label htmlFor="booking-event" className="text-sm font-medium text-slate-300">
                   Professor / Event Name
                 </label>
                 <input
+                  id="booking-event"
                   type="text"
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
                   disabled={loading}
-                  className="w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all"
+                  className={inputClass}
                   placeholder="e.g. Dr. Smith / Strategy Sync"
                 />
               </div>
@@ -251,96 +217,121 @@ export default function BookingModal({ onClose, onBooked }) {
               {/* Full Name + Attendees row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-slate-300">
+                  <label htmlFor="booking-name" className="text-sm font-medium text-slate-300">
                     Full Name <span className="text-red-400">*</span>
                   </label>
                   <input
+                    id="booking-name"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     disabled={loading}
-                    className="w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all"
+                    className={inputClass}
                     placeholder="Last, First M.I."
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-slate-300">
+                  <label htmlFor="booking-attendees" className="text-sm font-medium text-slate-300">
                     No. of Attendees
                   </label>
                   <input
+                    id="booking-attendees"
                     type="number"
                     min="1"
+                    max={capacity}
                     value={attendees}
                     onChange={(e) => setAttendees(e.target.value)}
                     disabled={loading}
-                    className="w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all"
+                    aria-describedby="booking-capacity"
+                    className={inputClass}
                     placeholder="e.g. 20"
                   />
+                  {capacity && (
+                    <p id="booking-capacity" className="text-xs text-slate-400">
+                      This room holds {capacity} people.
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* FEU Email */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">
+                <label htmlFor="booking-email" className="text-sm font-medium text-slate-300">
                   FEU Tech Email Address
                 </label>
                 <input
+                  id="booking-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
-                  className="w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all"
+                  className={inputClass}
                   placeholder="e.g. jdelacruz@feutech.edu.ph"
                 />
               </div>
 
-              {/* Time Pickers */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Date + Time Pickers: one date, so bookings can't span midnight */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-slate-300">
-                    Start Time
+                  <label htmlFor="booking-date" className="text-sm font-medium text-slate-300">
+                    Date
                   </label>
-                  <div className="relative">
-                    <input
-                      type="datetime-local"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      disabled={loading}
-                      className="w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all [color-scheme:dark]"
-                    />
-                  </div>
+                  <input
+                    id="booking-date"
+                    type="date"
+                    min={today}
+                    value={date}
+                    onChange={changeSlot(setDate)}
+                    disabled={loading}
+                    className={`${inputClass} [color-scheme:dark]`}
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-slate-300">
+                  <label htmlFor="booking-start" className="text-sm font-medium text-slate-300">
+                    Start Time
+                  </label>
+                  <input
+                    id="booking-start"
+                    type="time"
+                    step="900"
+                    value={start}
+                    onChange={changeSlot(setStart)}
+                    disabled={loading}
+                    className={`${inputClass} [color-scheme:dark]`}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="booking-end" className="text-sm font-medium text-slate-300">
                     End Time
                   </label>
-                  <div className="relative">
-                    <input
-                      type="datetime-local"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      disabled={loading}
-                      className="w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all [color-scheme:dark]"
-                    />
-                  </div>
+                  <input
+                    id="booking-end"
+                    type="time"
+                    step="900"
+                    value={end}
+                    onChange={changeSlot(setEnd)}
+                    disabled={loading}
+                    className={`${inputClass} [color-scheme:dark]`}
+                  />
                 </div>
               </div>
 
-              {/* Info Banner */}
-              <div className="mt-2 p-4 bg-[#0f49bd]/10 border border-[#0f49bd]/20 rounded-lg flex gap-3 items-start">
-                <span className="material-symbols-outlined text-[#0f49bd] shrink-0">
-                  info
-                </span>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Booking this room will automatically update the schedule
-                  dashboard.
-                </p>
-              </div>
+              {conflicts && (
+                <ConflictOverride
+                  conflicts={conflicts}
+                  override={override}
+                  onOverrideChange={setOverride}
+                  reason={reason}
+                  onReasonChange={setReason}
+                  disabled={loading}
+                  idPrefix="booking"
+                />
+              )}
 
               {/* Error Message */}
               {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <span className="material-symbols-outlined text-red-400 text-lg">
+                <div role="alert" className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-lg">
                     error
                   </span>
                   <p className="text-sm text-red-400">{error}</p>
@@ -360,7 +351,7 @@ export default function BookingModal({ onClose, onBooked }) {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={loading || Boolean(conflicts && !override)}
                 className="px-8 h-11 bg-[#0f49bd] hover:bg-[#0f49bd]/90 rounded-lg font-semibold text-white shadow-lg shadow-[#0f49bd]/20 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? (
@@ -389,10 +380,10 @@ export default function BookingModal({ onClose, onBooked }) {
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-xl">
+                    <span aria-hidden="true" className="material-symbols-outlined text-xl">
                       calendar_add_on
                     </span>
-                    <span>Book Room</span>
+                    <span>{conflicts ? "Book Anyway" : "Book Room"}</span>
                   </>
                 )}
               </button>

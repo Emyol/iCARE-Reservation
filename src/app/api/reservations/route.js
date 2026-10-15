@@ -1,27 +1,32 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import {
   getReservations,
   appendReservation,
   appendAuditLog,
   updateEmailStatus,
 } from "@/lib/googleSheets";
+import { findAdmin, sendConfirmationEmail } from "@/lib/email";
+import { getAdmin, requireAdmin } from "@/lib/auth";
 import {
-  findAdmin,
-  sendConfirmationEmail,
-  sendConflictEmail,
-  findConflict,
-} from "@/lib/email";
+  validateReservation,
+  findOverlaps,
+  toPublicReservation,
+  conflictSummary,
+} from "@/lib/reservationRules";
 
 /**
  * GET /api/reservations
- * Public endpoint. Returns all reservations from the Google Sheet.
+ * Public. Admins get full rows; everyone else gets room and time only,
+ * because rows hold requesters' names and emails.
  */
-export async function GET() {
+export async function GET(request) {
   try {
+    const admin = getAdmin(request);
     const reservations = await getReservations();
-    const response = NextResponse.json(reservations);
-    response.headers.set("Cache-Control", "no-store, max-age=0");
+    const response = NextResponse.json(
+      admin ? reservations : reservations.map(toPublicReservation),
+    );
+    response.headers.set("Cache-Control", "private, no-store, max-age=0");
     return response;
   } catch (error) {
     console.error("[DEBUG] Error fetching reservations:", error.message);
@@ -34,79 +39,61 @@ export async function GET() {
 
 /**
  * POST /api/reservations
- * Protected endpoint. Requires valid admin JWT cookie.
- * Appends a new reservation to the Google Sheet.
+ * Admin only. Validates, checks for overlaps, then appends to the sheet.
+ * An overlap is saved only with `override: true` and a `reason`.
  */
 export async function POST(request) {
   try {
-    // Verify admin authentication
-    const token = request.cookies.get("admin_token")?.value;
+    const { admin, response } = requireAdmin(request);
+    if (response) return response;
 
-    if (!token) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 },
-      );
-    }
-
-    try {
-      jwt.verify(token, process.env.JWT_SECRET);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 },
-      );
-    }
-
-    // Decode token to get admin identity
-    const decoded = jwt.decode(token);
-
-    // Parse and validate request body
     const body = await request.json();
-    const { room, eventName, startTime, endTime, fullName, email, attendees } =
-      body;
+    const { room, eventName, fullName, email, attendees, override, reason } = body;
 
-    if (!room || !eventName || !startTime || !endTime) {
-      return NextResponse.json(
-        {
-          error: "All fields are required: room, eventName, startTime, endTime",
-        },
-        { status: 400 },
-      );
-    }
-
-    // Validate that endTime is after startTime
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return NextResponse.json(
-        { error: "Invalid date format. Use ISO 8601 format." },
-        { status: 400 },
-      );
-    }
-    if (end <= start) {
-      return NextResponse.json(
-        { error: "End time must be after start time" },
-        { status: 400 },
-      );
-    }
-
-    // Check for conflicts BEFORE appending
-    let conflictingReservation = null;
-    try {
-      const allReservations = await getReservations();
-      conflictingReservation = findConflict(
-        { room, startTime, endTime, eventName },
-        allReservations,
-      );
-    } catch (err) {
-      console.error("Error checking conflicts:", err.message);
-    }
-
-    // Append to Google Sheet — pass timezone-free datetime strings
-    const reservation = await appendReservation({
+    const check = validateReservation({
       room,
       eventName,
+      startTime: body.startTime,
+      endTime: body.endTime,
+      attendees,
+    });
+    if (!check.ok) {
+      return NextResponse.json(
+        { error: check.errors[0], errors: check.errors },
+        { status: 400 },
+      );
+    }
+    const { startTime, endTime } = check.value;
+
+    // Saving without a conflict check is how double bookings got in, so a
+    // failed read stops the save instead of being ignored.
+    let allReservations;
+    try {
+      allReservations = await getReservations();
+    } catch (err) {
+      console.error("Error checking conflicts:", err.message);
+      return NextResponse.json(
+        { error: "Couldn't check the schedule for conflicts. Nothing was saved. Try again." },
+        { status: 503 },
+      );
+    }
+
+    const overlaps = findOverlaps({ room, startTime, endTime }, allReservations);
+    const overrideReason = typeof reason === "string" ? reason.trim() : "";
+    if (overlaps.length > 0 && !(override && overrideReason)) {
+      return NextResponse.json(
+        {
+          error: "This time overlaps an existing booking.",
+          needsOverride: true,
+          conflicts: overlaps.map(conflictSummary),
+        },
+        { status: 409 },
+      );
+    }
+
+    const reservation = await appendReservation({
+      room: room.trim(),
+      eventName: eventName.trim(),
       startTime,
       endTime,
       fullName: fullName || "Admin",
@@ -114,54 +101,51 @@ export async function POST(request) {
       attendees: attendees || "",
     });
 
-    // Auto-send email if reservant email is provided and admin has SMTP configured
+    // The booking is saved, so the booker always gets a confirmation; the old
+    // "Room Not Available" email contradicted the schedule.
     let emailResult = null;
-    if (email && decoded?.username) {
-      const admin = findAdmin(decoded.username);
-      if (admin && admin.smtpPassword) {
+    if (email) {
+      const account = findAdmin(admin.username);
+      if (!account || !account.smtpPassword) {
+        emailResult = {
+          sent: false,
+          error: "Email isn't set up for your admin account, so no confirmation was sent.",
+        };
+      } else {
         try {
-          const reservationForEmail = {
-            ...reservation,
-            recipientEmail: email,
-          };
-          if (conflictingReservation) {
-            await sendConflictEmail({
-              admin,
-              reservation: reservationForEmail,
-              conflictingReservation,
-            });
-            emailResult = { sent: true, type: "conflict" };
-          } else {
-            await sendConfirmationEmail({
-              admin,
-              reservation: reservationForEmail,
-            });
-            emailResult = { sent: true, type: "confirmation" };
-          }
-          // Update emailSent status in Google Sheet so the UI reflects correctly
-          if (reservation.rowIndex) {
-            try {
-              const emailType = conflictingReservation ? "Conflict notice" : "Confirmation";
-              const note = `${emailType} sent by ${admin.name || decoded.username} on ${new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })}`;
-              await updateEmailStatus(reservation.rowIndex, note);
-              reservation.emailSent = true;
-            } catch (updateErr) {
-              console.error("Email status update failed:", updateErr.message);
-            }
+          await sendConfirmationEmail({
+            admin: account,
+            reservation: { ...reservation, recipientEmail: email },
+          });
+          emailResult = { sent: true, type: "confirmation" };
+          try {
+            const note = `Confirmation sent by ${account.name || admin.username} on ${new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })}`;
+            await updateEmailStatus(reservation.rowIndex, note);
+            reservation.emailSent = true;
+          } catch (updateErr) {
+            console.error("Email status update failed:", updateErr.message);
           }
         } catch (err) {
           console.error("Auto-email failed:", err.message);
-          emailResult = { sent: false, error: err.message };
+          emailResult = {
+            sent: false,
+            error:
+              err.code === "EAUTH"
+                ? "The confirmation email couldn't be sent: Outlook rejected the app password."
+                : "The confirmation email couldn't be sent.",
+          };
         }
       }
     }
 
-    // Audit log
     try {
+      const overrideNote = overlaps.length
+        ? ` · OVERRIDE, overlaps ${overlaps.map((o) => o.eventName).join(", ")}: ${overrideReason}`
+        : "";
       await appendAuditLog({
         action: "CREATE",
-        admin: decoded?.name || decoded?.username || "Admin",
-        details: `${eventName} — ${room} (${startTime} to ${endTime})`,
+        admin: admin.name || admin.username || "Admin",
+        details: `${eventName.trim()} — ${room.trim()} (${startTime} to ${endTime})${overrideNote}`,
       });
     } catch (err) {
       console.error("Audit log failed:", err.message);
@@ -171,16 +155,7 @@ export async function POST(request) {
       {
         success: true,
         reservation,
-        conflict: conflictingReservation
-          ? {
-              eventName: conflictingReservation.eventName,
-              startTime: conflictingReservation.startTime,
-              endTime: conflictingReservation.endTime,
-              fullName: conflictingReservation.fullName || "",
-              timestamp: conflictingReservation.timestamp || "",
-              hasPriority: true,
-            }
-          : null,
+        overridden: overlaps.length > 0,
         email: emailResult,
       },
       { status: 201 },
