@@ -118,7 +118,10 @@ export default function DayGrid({ rooms, bookings, hours, now, notBefore, canAct
                     style={{ ...span(b.start, b.end, hours), top: 12 + b.lane * LANE_HEIGHT, height: LANE_HEIGHT - 12 }}
                   >
                     <span className="flex w-full items-center gap-2">
-                      <span className="truncate text-[14px] font-bold">{b.eventName}</span>
+                      {/* A short overlapping block has no room for both; the word wins, the name stays in the label. */}
+                      {!(b.conflict && b.end - b.start <= 90) && (
+                        <span className="truncate text-[14px] font-bold">{b.eventName}</span>
+                      )}
                       {b.conflict && <span className="lg-pill lg-pill-conflict shrink-0">Conflict</span>}
                     </span>
                     <span className="w-full truncate text-[13px] lg-num">

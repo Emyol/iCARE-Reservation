@@ -44,7 +44,7 @@ export default function DayAgenda({ rooms, bookings, hours, notBefore, canAct, i
                   className={`grid min-h-14 grid-cols-[108px_minmax(0,1fr)] items-center gap-3 rounded-[14px] border px-3 py-2 text-left ${
                     row.b.conflict
                       ? "border-[var(--lg-danger)] bg-[var(--lg-danger-soft)]"
-                      : "border-[var(--lg-rim)] bg-[var(--lg-pass-fill)]"
+                      : "border-[var(--lg-line)] bg-[var(--lg-pass-fill)] shadow-[var(--lg-shadow-soft)]"
                   }`}
                 >
                   <span className="text-[13px] lg-num">{formatRange(row.b.start, row.b.end)}</span>

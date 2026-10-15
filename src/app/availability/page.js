@@ -136,7 +136,7 @@ export default function AvailabilityPage() {
       {/* Date navigation and view switch */}
       <div className="lg-chrome flex flex-wrap items-center gap-3 px-4 py-3">
         <h1 className="lg-title mr-auto">{heading}</h1>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             aria-label={view === "week" ? "Previous week" : "Previous day"}
@@ -162,7 +162,7 @@ export default function AvailabilityPage() {
             type="date"
             value={date}
             onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="lg-input w-auto min-w-0 flex-1 sm:flex-none"
+            className="lg-input w-44"
           />
         </div>
         <div role="group" aria-label="View" className="lg-segmented">
