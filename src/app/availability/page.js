@@ -8,17 +8,22 @@ import GlassShell from "@/components/glass/GlassShell";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import BookingModal from "@/components/BookingModal";
 import ReservationDetailModal from "@/components/ReservationDetailModal";
+import EmailModal from "@/components/EmailModal";
 import DayGrid from "@/components/availability/DayGrid";
 import DayAgenda from "@/components/availability/DayAgenda";
 import WeekGrid from "@/components/availability/WeekGrid";
 import FindTime from "@/components/availability/FindTime";
 import RequestSlotDialog from "@/components/availability/RequestSlotDialog";
+import PassStack from "@/components/availability/PassStack";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { manilaNow } from "@/lib/reservationRules";
 import {
   addDays,
   bookingsOn,
   formatClock,
   hoursFor,
+  inRoom,
+  layoutLanes,
   roomsFor,
   startOfWeek,
   toClockInput,
@@ -34,6 +39,9 @@ function currentNow() {
   const stamp = manilaNow();
   return { date: stamp.slice(0, 10), minutes: Number(stamp.slice(11, 13)) * 60 + Number(stamp.slice(14, 16)) };
 }
+
+// Same key for a booking whether it comes from the grid or the pass list.
+const bookingKey = (b) => String(b.rowIndex ?? `${b.room}-${b.start}-${b.end}`);
 
 const longDate = (date) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
@@ -75,6 +83,9 @@ export default function AvailabilityPage() {
   const [requestSlot, setRequestSlot] = useState(null);
   const [bookingSlot, setBookingSlot] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [emailTarget, setEmailTarget] = useState(null);
+  const [frontKey, setFrontKey] = useState(null);
+  const isWide = useMediaQuery("(min-width: 1024px)");
 
   const fetchData = useCallback(async () => {
     try {
@@ -102,6 +113,24 @@ export default function AvailabilityPage() {
   const dayBookings = bookingsOn(reservations, date);
   const rooms = roomsFor(dayBookings);
   const hours = hoursFor(dayBookings);
+  // Staff pass column: every booking that day, overlaps first.
+  const passes = isAdmin
+    ? rooms
+        .flatMap((room) => {
+          const { items } = layoutLanes(inRoom(dayBookings, room.value));
+          return items.map((b) => ({
+            ...b,
+            key: bookingKey(b),
+            roomLabel: room.label,
+            overlapsWith: items
+              .filter((o) => o !== b && o.start < b.end && b.start < o.end)
+              .map((o) => o.eventName)
+              .join(", "),
+          }));
+        })
+        .sort((a, b) => Number(b.conflict) - Number(a.conflict) || a.start - b.start)
+    : [];
+  const showPassStack = isAdmin && isWide;
   const isToday = date === now.date;
   const isPast = date < now.date;
   const canAct = status === "ready" && !isPast;
@@ -113,7 +142,7 @@ export default function AvailabilityPage() {
     notBefore: isToday ? now.minutes : isPast ? hours.end : null,
     canAct,
     isAdmin,
-    onSelectBooking: setSelected,
+    onSelectBooking: showPassStack ? (b) => setFrontKey(bookingKey(b)) : setSelected,
     onSelectGap: (room, gap) => pickSlot({ room, date, start: gap.start, end: Math.min(gap.end, gap.start + 60) }),
   };
 
@@ -230,8 +259,20 @@ export default function AvailabilityPage() {
               </div>
             </div>
           )}
-          <div className="hidden md:block">
-            <DayGrid {...dayProps} />
+          <div className={showPassStack ? "grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]" : "hidden md:block"}>
+            <div className="min-w-0">
+              <DayGrid {...dayProps} />
+            </div>
+            {showPassStack && (
+              <PassStack
+                passes={passes}
+                frontKey={frontKey}
+                onFront={setFrontKey}
+                onOpenDetails={setSelected}
+                onEmail={setEmailTarget}
+                dateLabel={new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", day: "numeric", month: "short" })}
+              />
+            )}
           </div>
           <div className="md:hidden">
             <DayAgenda {...dayProps} />
@@ -270,6 +311,9 @@ export default function AvailabilityPage() {
             fetchData();
           }}
         />
+      )}
+      {emailTarget && (
+        <EmailModal reservation={emailTarget} onClose={() => setEmailTarget(null)} onSent={() => fetchData()} />
       )}
       {selected && (
         <ReservationDetailModal

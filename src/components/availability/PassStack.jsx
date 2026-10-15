@@ -1,0 +1,103 @@
+"use client";
+
+import { formatClock, formatRange } from "@/lib/availability";
+
+const ROOM_SHORT = {
+  "Audio-Visual Room": "AVR",
+  "Training Room": "Training",
+};
+
+// The sheet records whether a confirmation email went out, not a booking
+// status, so that is the only state shown besides an overlap.
+function StatusPill({ booking }) {
+  if (booking.conflict) return <span className="lg-pill lg-pill-conflict">Conflict</span>;
+  if (booking.emailSent) return <span className="lg-pill lg-pill-confirmed">Emailed</span>;
+  return <span className="lg-pill lg-pill-pending">Not emailed</span>;
+}
+
+/**
+ * Staff pass column from the "wallet beside the day" comp: the front pass is
+ * open with its details and actions; the rest show their header strip.
+ * Overlaps come first so they get handled before anything else.
+ */
+export default function PassStack({ passes, frontKey, onFront, onOpenDetails, onEmail, dateLabel }) {
+  if (passes.length === 0) {
+    return (
+      <aside className="lg-pass p-5" aria-label="Bookings">
+        <p className="font-semibold">No bookings this day</p>
+        <p className="mt-1 text-[14px] lg-muted">Pick a free block to add one.</p>
+      </aside>
+    );
+  }
+
+  const front = passes.find((p) => p.key === frontKey) || passes[0];
+  const rest = passes.filter((p) => p !== front);
+  const roomShort = (p) => ROOM_SHORT[p.roomLabel] || p.roomLabel;
+
+  return (
+    <aside className="flex flex-col gap-3" aria-label="Bookings">
+      <section className="lg-pass flex flex-col gap-4 p-5" aria-labelledby="front-pass-title">
+        <div className="flex items-start justify-between gap-3">
+          <h2 id="front-pass-title" className="text-[20px] font-bold leading-snug">
+            {front.eventName}
+          </h2>
+          <StatusPill booking={front} />
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="lg-chip">{roomShort(front)}</span>
+          <span className="text-[15px] lg-num">{formatRange(front.start, front.end)}</span>
+        </div>
+        <dl className="grid grid-cols-4 gap-2 border-t border-[var(--lg-line)] pt-4">
+          <div>
+            <dt className="lg-label">Date</dt>
+            <dd className="mt-0.5 font-semibold">{dateLabel}</dd>
+          </div>
+          <div>
+            <dt className="lg-label">From</dt>
+            <dd className="mt-0.5 font-semibold lg-num">{formatClock(front.start)}</dd>
+          </div>
+          <div>
+            <dt className="lg-label">To</dt>
+            <dd className="mt-0.5 font-semibold lg-num">{formatClock(front.end)}</dd>
+          </div>
+          <div>
+            <dt className="lg-label">People</dt>
+            <dd className="mt-0.5 font-semibold lg-num">{front.attendees || "-"}</dd>
+          </div>
+        </dl>
+        {front.conflict && front.overlapsWith && (
+          <p className="rounded-[14px] border border-[var(--lg-danger)] bg-[var(--lg-danger-soft)] px-4 py-3 text-[14px] font-medium">
+            Overlaps {front.overlapsWith}.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => onEmail(front)} className="lg-btn lg-btn-primary flex-1">
+            Send email
+          </button>
+          <button type="button" onClick={() => onOpenDetails(front)} className="lg-btn lg-btn-secondary flex-1">
+            Open details
+          </button>
+        </div>
+      </section>
+
+      {rest.map((p) => (
+        <button
+          key={p.key}
+          type="button"
+          onClick={() => onFront(p.key)}
+          className="lg-pass flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-[var(--lg-sheet-fill)]"
+          aria-label={`${p.eventName}, ${p.roomLabel}, ${formatRange(p.start, p.end)}${p.conflict ? ", overlaps another booking" : ""}. Show this booking.`}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[16px] font-bold">{p.eventName}</span>
+            <span className="mt-1 flex items-center gap-2 text-[13px]">
+              <span className="lg-chip">{roomShort(p)}</span>
+              <span className="lg-num">{formatRange(p.start, p.end)}</span>
+            </span>
+          </span>
+          <StatusPill booking={p} />
+        </button>
+      ))}
+    </aside>
+  );
+}
