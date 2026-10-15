@@ -112,10 +112,11 @@ export default function ReportsPage() {
         <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:px-8 sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <Link
-              href="/"
+              href="/dashboard"
+              aria-label="Back to dashboard"
               className="text-slate-400 hover:text-white transition-colors"
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 arrow_back
               </span>
             </Link>
@@ -153,7 +154,7 @@ export default function ReportsPage() {
                   <div
                     className={`size-12 rounded-lg ${c.bg} flex items-center justify-center`}
                   >
-                    <span className={`material-symbols-outlined ${c.text}`}>
+                    <span aria-hidden="true" className={`material-symbols-outlined ${c.text}`}>
                       {s.icon}
                     </span>
                   </div>
@@ -163,7 +164,7 @@ export default function ReportsPage() {
                     ) : (
                       <p className="text-2xl font-bold">{s.value}</p>
                     )}
-                    <p className="text-xs text-slate-500 font-medium">
+                    <p className="text-xs text-slate-400 font-medium">
                       {s.label}
                     </p>
                   </div>
@@ -175,7 +176,7 @@ export default function ReportsPage() {
           {/* Bookings by Month */}
           <div className="glass-panel/60 rounded-xl border border-white/5 overflow-hidden">
             <div className="p-4 border-b border-white/5 flex items-center gap-2">
-              <span className="material-symbols-outlined text-slate-400 text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-[20px]">
                 calendar_month
               </span>
               <h4 className="text-sm font-semibold text-slate-200">
@@ -189,7 +190,7 @@ export default function ReportsPage() {
                 ))}
               </div>
             ) : monthEntries.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-sm">
+              <div className="p-8 text-center text-slate-400 text-sm">
                 No data available
               </div>
             ) : (
@@ -222,7 +223,7 @@ export default function ReportsPage() {
         </div>
 
         <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-500 text-xs">
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} iCARE Room Reservation System — FEU
             Institute of Technology
           </p>

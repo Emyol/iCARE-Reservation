@@ -182,22 +182,24 @@ export default function DashboardPage() {
               </h2>
               {/* Search — desktop only */}
               <div className="relative w-64 hidden md:block">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">
+                <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">
                   search
                 </span>
                 <input
-                  className="w-full pl-10 pr-8 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/40 focus:outline-none transition-colors"
-                  placeholder="Search rooms, staff..."
+                  className="w-full pl-10 pr-8 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd]/40 focus:outline-none transition-colors"
+                  aria-label="Search reservations"
+                  placeholder="Search rooms, events..."
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery && (
                   <button
+                    aria-label="Clear search"
                     onClick={() => setSearchQuery("")}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[16px]">close</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-[16px]">close</span>
                   </button>
                 )}
               </div>
@@ -206,10 +208,11 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               {isAdmin && (
                 <button
+                  aria-label="Add booking"
                   onClick={() => setShowBookingModal(true)}
                   className="flex items-center gap-2 px-4 py-2 auro-button text-white text-sm font-semibold rounded-lg shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition-all duration-200"
                 >
-                  <span className="material-symbols-outlined text-[20px]">
+                  <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                     add
                   </span>
                   <span className="hidden sm:inline">Add Booking</span>
@@ -218,10 +221,11 @@ export default function DashboardPage() {
 
               {!isAdmin && (
                 <button
+                  aria-label="Admin login"
                   onClick={() => setShowLoginModal(true)}
                   className="md:hidden flex items-center gap-1 px-3 py-2 text-sm text-slate-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[18px]">
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
                     login
                   </span>
                   <span className="hidden sm:inline">Login</span>
@@ -231,21 +235,23 @@ export default function DashboardPage() {
               {/* Day / Week Toggle — tablet+ */}
               <div className="hidden md:flex bg-white/5 p-1 rounded-lg border border-white/5">
                 <button
+                  aria-pressed={view === "day"}
                   onClick={() => setView("day")}
                   className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     view === "day"
                       ? "bg-white/10 text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-300"
+                      : "text-slate-400 hover:text-slate-300"
                   }`}
                 >
                   Day
                 </button>
                 <button
+                  aria-pressed={view === "week"}
                   onClick={() => setView("week")}
                   className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     view === "week"
                       ? "bg-white/10 text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-300"
+                      : "text-slate-400 hover:text-slate-300"
                   }`}
                 >
                   Week
@@ -255,12 +261,14 @@ export default function DashboardPage() {
               {/* Notification Bell */}
               <div className="relative" ref={notifRef}>
                 <button
+                  aria-label="Latest submissions"
+                  aria-expanded={showNotifications}
                   onClick={() => setShowNotifications((prev) => !prev)}
                   className="size-10 flex items-center justify-center text-slate-400 hover:bg-white/5 rounded-full transition-colors relative"
                 >
-                  <span className="material-symbols-outlined">notifications</span>
+                  <span aria-hidden="true" className="material-symbols-outlined">notifications</span>
                   {newSubmissionsCount > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center px-0.5">
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 rounded-full text-xs font-bold text-white flex items-center justify-center px-0.5">
                       {newSubmissionsCount > 9 ? "9+" : newSubmissionsCount}
                     </span>
                   )}
@@ -273,17 +281,18 @@ export default function DashboardPage() {
                       Latest Submissions
                     </span>
                     <button
+                      aria-label="Close latest submissions"
                       onClick={() => setShowNotifications(false)}
                       className="text-slate-400 hover:text-white"
                     >
-                      <span className="material-symbols-outlined text-[18px]">
+                      <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
                         close
                       </span>
                     </button>
                   </div>
                   <div className="divide-y divide-white/5 max-h-72 overflow-y-auto">
                     {recentReservations.length === 0 ? (
-                      <p className="p-4 text-sm text-slate-500 text-center">
+                      <p className="p-4 text-sm text-slate-400 text-center">
                         No reservations yet
                       </p>
                     ) : (
@@ -296,7 +305,7 @@ export default function DashboardPage() {
                                 isAVR ? "bg-emerald-500/10" : "bg-blue-500/10"
                               }`}
                             >
-                              <span
+                              <span aria-hidden="true"
                                 className={`material-symbols-outlined text-[16px] ${
                                   isAVR ? "text-emerald-400" : "text-blue-400"
                                 }`}
@@ -308,12 +317,12 @@ export default function DashboardPage() {
                               <p className="text-xs font-semibold text-white truncate">
                                 {r.eventName}
                               </p>
-                              <p className="text-[10px] text-slate-400 truncate">
+                              <p className="text-xs text-slate-400 truncate">
                                 {r.room.split(" /")[0]}
                               </p>
                               <p
                                 suppressHydrationWarning
-                                className="text-[10px] text-slate-500 mt-0.5"
+                                className="text-xs text-slate-400 mt-0.5"
                               >
                                 {new Date(r.startTime).toLocaleDateString(
                                   "en-US",
@@ -338,43 +347,47 @@ export default function DashboardPage() {
           <div className="md:hidden flex items-center gap-2 px-4 pb-3">
             <div className="flex bg-white/5 p-1 rounded-lg border border-white/5 shrink-0">
               <button
+                aria-pressed={view === "day"}
                 onClick={() => setView("day")}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   view === "day"
                     ? "bg-white/10 text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-300"
+                    : "text-slate-400 hover:text-slate-300"
                 }`}
               >
                 Day
               </button>
               <button
+                aria-pressed={view === "week"}
                 onClick={() => setView("week")}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   view === "week"
                     ? "bg-white/10 text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-300"
+                    : "text-slate-400 hover:text-slate-300"
                 }`}
               >
                 Week
               </button>
             </div>
             <div className="relative flex-1">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+              <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
                 search
               </span>
               <input
-                className="w-full pl-9 pr-8 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/40 focus:outline-none transition-colors"
-                placeholder="Search rooms, staff..."
+                className="w-full pl-9 pr-8 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd]/40 focus:outline-none transition-colors"
+                aria-label="Search reservations"
+                placeholder="Search rooms, events..."
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
                 <button
+                  aria-label="Clear search"
                   onClick={() => setSearchQuery("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[16px]">close</span>
                 </button>
               )}
             </div>
@@ -385,7 +398,7 @@ export default function DashboardPage() {
         <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto w-full">
           {error && (
             <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-              <span className="material-symbols-outlined text-red-400">
+              <span aria-hidden="true" className="material-symbols-outlined text-red-400">
                 error
               </span>
               <div className="flex-1">
@@ -411,8 +424,8 @@ export default function DashboardPage() {
             <>
               {searchQuery && avrTodayData.length === 0 && studyTodayData.length === 0 && !loading && (
                 <div className="glass-panel p-12 text-center">
-                  <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">search_off</span>
-                  <p className="text-slate-500 text-sm font-medium">
+                  <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-4xl mb-3 block">search_off</span>
+                  <p className="text-slate-400 text-sm font-medium">
                     No reservations found for &ldquo;{searchQuery}&rdquo;
                   </p>
                   <button
@@ -455,13 +468,13 @@ export default function DashboardPage() {
           {view === "week" && (
             <section>
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-teal-400">
+                <span aria-hidden="true" className="material-symbols-outlined text-teal-400">
                   calendar_view_week
                 </span>
                 <h3 className="text-lg font-bold">
                   This Week&apos;s Reservations
                 </h3>
-                <span className="text-xs text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5 ml-auto">
+                <span className="text-xs text-slate-400 bg-white/5 px-2 py-1 rounded border border-white/5 ml-auto">
                   {weekStart.toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -481,10 +494,10 @@ export default function DashboardPage() {
                 </div>
               ) : weekDays.length === 0 ? (
                 <div className="glass-panel p-12 text-center">
-                  <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">
+                  <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-4xl mb-3 block">
                     {searchQuery ? "search_off" : "event_available"}
                   </span>
-                  <p className="text-slate-500 text-sm font-medium">
+                  <p className="text-slate-400 text-sm font-medium">
                     {searchQuery
                       ? `No reservations found for "${searchQuery}"`
                       : "No reservations this week"}
@@ -523,7 +536,7 @@ export default function DashboardPage() {
                           .map((r, i) => {
                             const isAVR = isAvrRoom(r.room);
                             return (
-                              <div
+                              <div role="presentation"
                                 key={i}
                                 onClick={() => setSelectedReservation(r)}
                                 className={`glass-panel/60 rounded-xl border p-4 flex items-center gap-4 cursor-pointer transition-all hover:scale-[1.01] ${
@@ -539,7 +552,7 @@ export default function DashboardPage() {
                                       : "bg-blue-500/10"
                                   }`}
                                 >
-                                  <span
+                                  <span aria-hidden="true"
                                     className={`material-symbols-outlined text-[20px] ${
                                       isAVR
                                         ? "text-emerald-400"
@@ -550,9 +563,17 @@ export default function DashboardPage() {
                                   </span>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-white truncate">
+                                  {/* The card is clickable by mouse; this button is the keyboard and screen-reader target. */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedReservation(r);
+                                    }}
+                                    className="block max-w-full text-left text-sm font-semibold text-white truncate"
+                                  >
                                     {r.eventName}
-                                  </p>
+                                  </button>
                                   <p className="text-xs text-slate-400 truncate">
                                     {r.room}
                                   </p>
@@ -567,7 +588,7 @@ export default function DashboardPage() {
                                       {formatTime(r.endTime)}
                                     </p>
                                     {r.fullName && (
-                                      <p className="text-xs text-slate-500 mt-0.5">
+                                      <p className="text-xs text-slate-400 mt-0.5">
                                         {r.fullName}
                                       </p>
                                     )}
@@ -588,8 +609,13 @@ export default function DashboardPage() {
                                           ? "Email already sent — click to resend"
                                           : "Send email to reservant"
                                       }
+                                      aria-label={
+                                        r.emailSent
+                                          ? `Resend email for ${r.eventName}`
+                                          : `Send email for ${r.eventName}`
+                                      }
                                     >
-                                      <span className="material-symbols-outlined text-[16px]">
+                                      <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
                                         {r.emailSent
                                           ? "mark_email_read"
                                           : "mail"}
@@ -612,13 +638,13 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div className="glass-panel p-6 flex items-center gap-4 hover:border-emerald-500/20 transition-colors">
               <div className="size-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-emerald-500">
+                <span aria-hidden="true" className="material-symbols-outlined text-emerald-500">
                   check_circle
                 </span>
               </div>
               <div>
                 <p className="text-2xl font-bold">{totalBookings}</p>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-400 font-medium">
                   Total Reservations
                 </p>
               </div>
@@ -626,13 +652,13 @@ export default function DashboardPage() {
 
             <div className="glass-panel p-6 flex items-center gap-4 hover:border-[#0f49bd]/20 transition-colors">
               <div className="size-12 rounded-lg bg-[#0f49bd]/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[#0f49bd]">
+                <span aria-hidden="true" className="material-symbols-outlined text-[#0f49bd]">
                   videocam
                 </span>
               </div>
               <div>
                 <p className="text-2xl font-bold">{avrBookings}</p>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-400 font-medium">
                   Audio-Visual Room / Enhancement Area (Capacity: 40)
                 </p>
               </div>
@@ -640,13 +666,13 @@ export default function DashboardPage() {
 
             <div className="glass-panel p-6 flex items-center gap-4 hover:border-amber-500/20 transition-colors">
               <div className="size-12 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-amber-500">
+                <span aria-hidden="true" className="material-symbols-outlined text-amber-500">
                   auto_stories
                 </span>
               </div>
               <div>
                 <p className="text-2xl font-bold">{studyBookings}</p>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-400 font-medium">
                   Individual Training / Small Group Discussion Room (Capacity: 10)
                 </p>
               </div>
@@ -655,7 +681,7 @@ export default function DashboardPage() {
         </div>
 
         <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-500 text-xs">
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} iCARE Room Reservation System — FEU
             Institute of Technology
           </p>

@@ -141,6 +141,78 @@ body {
   transform: translateY(-1px);
 }
 
+/* Keyboard focus. Unlayered, so it wins over Tailwind's outline-none. */
+:focus-visible {
+  outline: 2px solid #2dd4bf;
+  outline-offset: 2px;
+}
+
+/* Classes the components used without a definition */
+.glass-panel\/60 {
+  background: rgba(22, 18, 38, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.modal-overlay {
+  animation: modal-fade 150ms ease-out;
+}
+
+.modal-content {
+  animation: modal-rise 180ms ease-out;
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.custom-select {
+  cursor: pointer;
+}
+
+/* Decorative motion stops; state changes (colour, opacity) still show. */
+@media (prefers-reduced-motion: reduce) {
+  .cosmic-bg,
+  .skeleton,
+  .modal-overlay,
+  .modal-content,
+  .animate-pulse,
+  [style*="float"] {
+    animation: none !important;
+  }
+
+  .glass-panel-interactive:hover,
+  .auro-button:hover {
+    transform: none;
+  }
+}
+
 /* Form and status primitives (used by AvailabilityChecker) */
 .surface-panel {
   background: rgba(22, 18, 38, 0.55);

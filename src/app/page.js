@@ -2,10 +2,26 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import { requestFormUrl } from "@/lib/requestForm";
 
+const SPLASH_SEEN_KEY = "icare-splash-seen";
+
+function shouldSkipSplash() {
+  try {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
+    return window.sessionStorage.getItem(SPLASH_SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 function SplashScreen({ onComplete }) {
+  // Plays once per browser session, and never for reduced-motion users.
+  useEffect(() => {
+    if (shouldSkipSplash()) onComplete();
+  }, [onComplete]);
+
   const line1 = "Always for the students,";
   const line2 = "iCARE for you.";
   const speed = 55;
@@ -54,20 +70,35 @@ function SplashScreen({ onComplete }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-6">
       <span className="text-2xl md:text-4xl font-bold text-white tracking-wide text-center">
-        {display}
-        <span className="animate-pulse text-white/60">|</span>
+        <span aria-hidden="true">{display}</span>
+        <span className="sr-only">Always for the students, iCARE for you.</span>
+        <span aria-hidden="true" className="animate-pulse text-white/60">|</span>
       </span>
+      <button
+        type="button"
+        onClick={onComplete}
+        className="fixed bottom-8 right-8 px-4 py-2 text-sm font-medium text-slate-300 border border-white/20 rounded-lg hover:bg-white/10"
+      >
+        Skip
+      </button>
     </div>
   );
 }
 
 export default function LandingPage() {
   const [showSplash, setShowSplash] = useState(true);
-  const handleComplete = useCallback(() => setShowSplash(false), []);
+  const handleComplete = useCallback(() => {
+    try {
+      window.sessionStorage.setItem(SPLASH_SEEN_KEY, "1");
+    } catch {
+      // Storage blocked: the splash may replay, which is harmless.
+    }
+    setShowSplash(false);
+  }, []);
   const formUrl = requestFormUrl();
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <AnimatePresence>
         {showSplash && (
           <motion.div
@@ -95,7 +126,7 @@ export default function LandingPage() {
               className="glass-panel p-4 rounded-2xl flex items-center justify-center"
               style={{ animation: "float 6s ease-in-out infinite" }}
             >
-              <span className="material-symbols-outlined text-purple-400 text-5xl glow-text">
+              <span aria-hidden="true" className="material-symbols-outlined text-purple-400 text-5xl glow-text">
                 school
               </span>
             </div>
@@ -129,14 +160,14 @@ export default function LandingPage() {
               href="/dashboard"
               className="flex items-center gap-2 px-8 py-4 auro-button text-white font-bold rounded-2xl text-lg w-full sm:w-auto justify-center relative z-20"
             >
-              <span className="material-symbols-outlined">dashboard</span>
+              <span aria-hidden="true" className="material-symbols-outlined">dashboard</span>
               Enter Dashboard
             </Link>
             <Link
               href="/schedule"
               className="flex items-center gap-2 px-8 py-4 glass-panel glass-panel-interactive text-slate-200 font-bold rounded-2xl text-lg w-full sm:w-auto justify-center relative z-20"
             >
-              <span className="material-symbols-outlined">calendar_today</span>
+              <span aria-hidden="true" className="material-symbols-outlined">calendar_today</span>
               View Schedule
             </Link>
             {formUrl && (
@@ -146,7 +177,7 @@ export default function LandingPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-8 py-4 glass-panel glass-panel-interactive text-slate-200 font-bold rounded-2xl text-lg w-full sm:w-auto justify-center relative z-20"
               >
-                <span className="material-symbols-outlined">edit_calendar</span>
+                <span aria-hidden="true" className="material-symbols-outlined">edit_calendar</span>
                 Request a Room
               </a>
             )}
@@ -191,7 +222,7 @@ export default function LandingPage() {
                   className="glass-panel glass-panel-interactive p-6 flex flex-col gap-3 h-full cursor-pointer"
                 >
                   <div className="bg-white/5 w-12 h-12 rounded-full flex items-center justify-center border border-white/10 mb-2">
-                    <span
+                    <span aria-hidden="true"
                       className={`material-symbols-outlined text-3xl ${f.color}`}
                     >
                       {f.icon}
@@ -206,11 +237,11 @@ export default function LandingPage() {
         </div>
 
         <footer className="absolute bottom-0 w-full text-center pb-6 z-10">
-          <p className="text-slate-500 text-sm font-medium">
+          <p className="text-slate-400 text-sm font-medium">
             © {new Date().getFullYear()} iCARE Room Reservation System
           </p>
         </footer>
       </div>
-    </>
+    </MotionConfig>
   );
 }

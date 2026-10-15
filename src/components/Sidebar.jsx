@@ -92,6 +92,8 @@ function SidebarNavLink({ href, label, icon }) {
   return (
     <Link
       href={href}
+      aria-label={label}
+      aria-current={isActive ? "page" : undefined}
       onClick={() => setOpen(false)}
       className={`flex items-center group/sidebar py-2.5 rounded-xl transition-all duration-300 relative overflow-hidden ${
         open ? "justify-start gap-2 px-3" : "justify-center px-0"
@@ -105,7 +107,7 @@ function SidebarNavLink({ href, label, icon }) {
         className={`flex-shrink-0 ${
           isActive
             ? "text-purple-400"
-            : "text-slate-500 group-hover/sidebar:text-purple-300"
+            : "text-slate-400 group-hover/sidebar:text-purple-300"
         }`}
       >
         {icon}
@@ -148,6 +150,7 @@ function AdminSection({ onLogout }) {
           onClick={onLogout}
           className="text-slate-400 hover:text-pink-400 transition-colors bg-white/5 p-1.5 rounded-lg hover:bg-pink-500/20 flex-shrink-0"
           title="Logout"
+          aria-label="Log out"
         >
           <LogOut className="h-4 w-4" />
         </button>
@@ -162,6 +165,7 @@ function LoginButton({ onLoginClick }) {
   return (
     <button
       onClick={onLoginClick}
+      aria-label="Admin Login"
       className={`flex items-center py-2.5 rounded-xl text-sm font-medium text-purple-200 hover:bg-purple-500/10 transition-colors w-full ${
         open ? "gap-2 px-2" : "justify-center px-0"
       }`}
@@ -184,10 +188,11 @@ const Logo = () => {
   return (
     <Link
       href="/dashboard"
+      aria-label="iCARE Reservation dashboard"
       className="font-normal flex space-x-3 items-center text-sm py-1 relative z-20 px-2"
     >
       <div className="bg-purple-500/20 p-2 rounded-xl border border-purple-500/30 flex-shrink-0">
-        <span className="material-symbols-outlined text-purple-400 glow-text text-lg">
+        <span aria-hidden="true" className="material-symbols-outlined text-purple-400 glow-text text-lg">
           school
         </span>
       </div>
@@ -199,7 +204,7 @@ const Logo = () => {
         <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 text-lg leading-tight tracking-wide">
           iCARE
         </span>
-        <span className="text-[10px] text-slate-400 tracking-wider uppercase font-semibold">
+        <span className="text-xs text-slate-400 tracking-wider uppercase font-semibold">
           Reservation
         </span>
       </motion.div>
@@ -211,10 +216,11 @@ const LogoIcon = () => {
   return (
     <Link
       href="/dashboard"
+      aria-label="iCARE Reservation dashboard"
       className="font-normal flex items-center justify-center text-sm py-1 relative z-20 mx-auto"
     >
       <div className="bg-purple-500/20 p-1.5 rounded-lg border border-purple-500/30 flex-shrink-0">
-        <span className="material-symbols-outlined text-purple-400 glow-text text-base">
+        <span aria-hidden="true" className="material-symbols-outlined text-purple-400 glow-text text-base">
           school
         </span>
       </div>

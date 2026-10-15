@@ -97,6 +97,11 @@ export const DesktopSidebar = ({
       }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
+      // Keyboard users get the same expanded labels as mouse users.
+      onFocus={() => setOpen(true)}
+      onBlur={(e: React.FocusEvent<HTMLDivElement>) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
       {...props}
     >
       {children}
@@ -117,10 +122,15 @@ export const MobileSidebar = ({
           <span className="text-white">iCARE</span>{" "}
           <span className="text-purple-400">Reservation</span>
         </span>
-        <Menu
-          className="text-slate-300 cursor-pointer"
+        <button
+          type="button"
+          aria-label="Open menu"
+          aria-expanded={open}
+          className="flex items-center justify-center size-11 -mr-2 text-slate-300"
           onClick={() => setOpen(!open)}
-        />
+        >
+          <Menu aria-hidden="true" />
+        </button>
       </div>
 
       {/* Full-screen drawer — sibling of top bar so it is NOT trapped inside
@@ -132,6 +142,12 @@ export const MobileSidebar = ({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "-100%", opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Main menu"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setOpen(false);
+            }}
             className={cn(
               "fixed inset-0 p-8 z-[200] flex flex-col justify-between md:hidden",
               className,
@@ -143,12 +159,14 @@ export const MobileSidebar = ({
               WebkitBackdropFilter: "none",
             }}
           >
-            <div
-              className="absolute right-6 top-6 z-50 text-slate-400 hover:text-white cursor-pointer"
+            <button
+              type="button"
+              aria-label="Close menu"
+              className="absolute right-4 top-4 z-50 flex items-center justify-center size-11 text-slate-400 hover:text-white"
               onClick={() => setOpen(false)}
             >
-              <X />
-            </div>
+              <X aria-hidden="true" />
+            </button>
             {children}
           </motion.div>
         )}

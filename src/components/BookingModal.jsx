@@ -4,9 +4,10 @@ import { useState } from "react";
 import { ROOMS } from "@/lib/rooms";
 import { manilaNow, validateReservation } from "@/lib/reservationRules";
 import ConflictOverride from "@/components/ConflictOverride";
+import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 
 const inputClass =
-  "w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all";
+  "w-full h-12 bg-slate-800/50 border border-slate-700 rounded-lg px-4 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd]/50 focus:border-[#0f49bd] outline-none transition-all";
 
 /**
  * Manual Booking Modal
@@ -14,6 +15,7 @@ const inputClass =
  * save anyway with a reason. On success, calls onBooked() to refresh data.
  */
 export default function BookingModal({ onClose, onBooked }) {
+  const dialogRef = useAccessibleDialog(onClose);
   const today = manilaNow().slice(0, 10);
   const [room, setRoom] = useState("");
   const [eventName, setEventName] = useState("");
@@ -117,16 +119,16 @@ export default function BookingModal({ onClose, onBooked }) {
   }
 
   return (
-    <div
+    <div role="presentation"
       className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-overlay"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#192233] w-full max-w-[520px] max-h-[92vh] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col modal-content">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="booking-title" tabIndex={-1} className="bg-[#192233] w-full max-w-[520px] max-h-[92vh] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col modal-content">
         {/* Header */}
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-100">
+              <h2 id="booking-title" className="text-2xl font-bold text-slate-100">
                 Manual Room Booking
               </h2>
               <p className="text-slate-400 text-sm mt-1">
@@ -138,7 +140,7 @@ export default function BookingModal({ onClose, onBooked }) {
               aria-label="Close"
               className="text-slate-400 hover:text-slate-200 transition-colors"
             >
-              <span className="material-symbols-outlined">close</span>
+              <span aria-hidden="true" className="material-symbols-outlined">close</span>
             </button>
           </div>
         </div>
@@ -146,7 +148,7 @@ export default function BookingModal({ onClose, onBooked }) {
         {emailProblem ? (
           <div className="p-6 flex flex-col gap-5 overflow-y-auto">
             <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <span className="material-symbols-outlined text-emerald-400 text-2xl shrink-0">
+              <span aria-hidden="true" className="material-symbols-outlined text-emerald-400 text-2xl shrink-0">
                 check_circle
               </span>
               <p className="text-sm font-semibold text-emerald-400">
@@ -329,7 +331,7 @@ export default function BookingModal({ onClose, onBooked }) {
               {/* Error Message */}
               {error && (
                 <div role="alert" className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <span className="material-symbols-outlined text-red-400 text-lg">
+                  <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-lg">
                     error
                   </span>
                   <p className="text-sm text-red-400">{error}</p>
@@ -378,7 +380,7 @@ export default function BookingModal({ onClose, onBooked }) {
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-xl">
+                    <span aria-hidden="true" className="material-symbols-outlined text-xl">
                       calendar_add_on
                     </span>
                     <span>{conflicts ? "Book Anyway" : "Book Room"}</span>

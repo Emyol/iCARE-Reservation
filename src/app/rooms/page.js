@@ -100,10 +100,11 @@ export default function RoomsPage() {
         <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:px-8 sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <Link
-              href="/"
+              href="/dashboard"
+              aria-label="Back to dashboard"
               className="text-slate-400 hover:text-white transition-colors"
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 arrow_back
               </span>
             </Link>
@@ -136,7 +137,7 @@ export default function RoomsPage() {
                     <div
                       className={`size-12 rounded-lg ${c.bg} flex items-center justify-center shrink-0`}
                     >
-                      <span className={`material-symbols-outlined ${c.icon}`}>
+                      <span aria-hidden="true" className={`material-symbols-outlined ${c.icon}`}>
                         {room.icon}
                       </span>
                     </div>
@@ -174,7 +175,7 @@ export default function RoomsPage() {
           <AvailabilityChecker reservations={reservations} dataStatus={dataStatus} />
 
           <div className="glass-panel/60 rounded-xl border border-white/5 p-6 flex items-start gap-4">
-            <span className="material-symbols-outlined text-[#0f49bd] shrink-0 mt-0.5">
+            <span aria-hidden="true" className="material-symbols-outlined text-[#0f49bd] shrink-0 mt-0.5">
               info
             </span>
             <div>
@@ -185,7 +186,7 @@ export default function RoomsPage() {
                 Submit a reservation request through the iCARE Google Form.
                 Requests are reviewed and a confirmation email will be sent once
                 approved. Admins may also book directly from the{" "}
-                <Link href="/" className="text-teal-400 hover:underline">
+                <Link href="/dashboard" className="text-teal-400 hover:underline">
                   Dashboard
                 </Link>
                 .
@@ -208,7 +209,7 @@ export default function RoomsPage() {
         </div>
 
         <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-500 text-xs">
+          <p className="text-slate-400 text-xs">
             © {new Date().getFullYear()} iCARE Room Reservation System — FEU
             Institute of Technology
           </p>

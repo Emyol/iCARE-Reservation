@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
 /**
  * Custom Timeline/Gantt chart built with CSS grid.
@@ -30,17 +30,13 @@ export default function TimelineChart({
   const timelineEnd = 20; // 20:00 (exclusive, so range is 08:00-19:59)
   const totalHours = timelineEnd - timelineStart;
 
-  // dateLabel is computed only on the client to avoid SSR/client hydration mismatch
-  const [dateLabel, setDateLabel] = useState("");
-  useEffect(() => {
-    setDateLabel(
-      new Date().toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      }),
-    );
-  }, []);
+  // The server and browser may disagree on "today"; the label that renders
+  // it suppresses the hydration warning instead of deferring to an effect.
+  const dateLabel = new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 
   // Group events by room
   const roomGroups = useMemo(() => {
@@ -61,26 +57,29 @@ export default function TimelineChart({
       bg: "bg-emerald-500/20",
       border: "border-emerald-500",
       textPrimary: "text-emerald-400",
-      textSecondary: "text-emerald-500",
+      textSecondary: "text-slate-200",
       hoverBg: "hover:bg-emerald-500/30",
     },
     blue: {
       bg: "bg-blue-500/20",
       border: "border-blue-500",
       textPrimary: "text-blue-400",
-      textSecondary: "text-blue-500",
+      textSecondary: "text-slate-200",
       hoverBg: "hover:bg-blue-500/30",
     },
     amber: {
       bg: "bg-amber-500/20",
       border: "border-amber-500",
       textPrimary: "text-amber-400",
-      textSecondary: "text-amber-500",
+      textSecondary: "text-slate-200",
       hoverBg: "hover:bg-amber-500/30",
     },
   };
 
   const colorScheme = colors[accentColor] || colors.emerald;
+
+  const formatClock = (iso) =>
+    new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   function getEventPosition(event) {
     const start = new Date(event.startTime);
@@ -139,20 +138,20 @@ export default function TimelineChart({
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className={`material-symbols-outlined ${iconColor}`}>
+            <span aria-hidden="true" className={`material-symbols-outlined ${iconColor}`}>
               {icon}
             </span>
             <h3 className="text-lg font-bold">{title}</h3>
           </div>
         </div>
         <div className="bg-slate-900/60 rounded-xl border border-white/5 p-12 text-center">
-          <span className="material-symbols-outlined text-slate-600 text-4xl mb-3 block">
+          <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-4xl mb-3 block">
             event_available
           </span>
-          <p className="text-slate-500 text-sm font-medium">
+          <p className="text-slate-400 text-sm font-medium">
             No reservations scheduled
           </p>
-          <p className="text-slate-600 text-xs mt-1">
+          <p className="text-slate-400 text-xs mt-1">
             Bookings will appear here once they are added
           </p>
         </div>
@@ -165,7 +164,7 @@ export default function TimelineChart({
       {/* Section Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className={`material-symbols-outlined ${iconColor}`}>
+          <span aria-hidden="true" className={`material-symbols-outlined ${iconColor}`}>
             {icon}
           </span>
           <h3 className="text-lg font-bold">{title}</h3>
@@ -175,12 +174,15 @@ export default function TimelineChart({
             legend.map((item, idx) => (
               <div key={idx} className="flex items-center gap-1.5">
                 <span className={`size-2 rounded-full ${item.color}`} />
-                <span className="text-[10px] font-medium text-slate-500">
+                <span className="text-xs font-medium text-slate-400">
                   {item.label}
                 </span>
               </div>
             ))}
-          <span className="text-xs text-slate-500 bg-white/5 px-2 py-1 rounded border border-white/5">
+          <span
+            suppressHydrationWarning
+            className="text-xs text-slate-400 bg-white/5 px-2 py-1 rounded border border-white/5"
+          >
             Today, {dateLabel}
           </span>
         </div>
@@ -189,7 +191,7 @@ export default function TimelineChart({
       {/* Timeline Grid */}
       <div className="bg-slate-900/60 rounded-xl border border-white/5 overflow-hidden shadow-sm overflow-x-auto">
         {/* Time Header */}
-        <div className="flex border-b border-white/5 bg-white/[0.03] text-[10px] uppercase tracking-wider font-bold text-slate-500 min-w-[960px]">
+        <div className="flex border-b border-white/5 bg-white/[0.03] text-xs uppercase tracking-wider font-bold text-slate-400 min-w-[960px]">
           <div className="p-3 border-r border-white/5 w-52 shrink-0">Room</div>
           <div className="flex-1 grid grid-cols-12">
             {hours.map((hour) => (
@@ -227,31 +229,28 @@ export default function TimelineChart({
                   const pos = getEventPosition(event);
                   if (!pos) return null;
 
-                  // Alternate colors for study area events
-                  const eventColorScheme =
-                    accentColor === "emerald"
-                      ? colorScheme
-                      : idx % 2 === 0
-                        ? colors.blue
-                        : colors.amber;
+                  const eventColorScheme = colorScheme;
+                  const timeRange = `${formatClock(event.startTime)} to ${formatClock(event.endTime)}`;
 
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={idx}
                       suppressHydrationWarning
-                      className={`absolute inset-y-2 ${eventColorScheme.bg} border-l-4 ${eventColorScheme.border} rounded-r-md p-2 overflow-hidden cursor-pointer ${eventColorScheme.hoverBg} transition-all duration-200 timeline-event z-10`}
+                      className={`absolute inset-y-2 text-left ${eventColorScheme.bg} border-l-4 ${eventColorScheme.border} rounded-r-md p-2 overflow-hidden cursor-pointer ${eventColorScheme.hoverBg} transition-colors duration-200 z-10`}
                       style={{ left: pos.left, width: pos.width }}
-                      title={`${event.eventName}\n${new Date(event.startTime).toLocaleTimeString()} - ${new Date(event.endTime).toLocaleTimeString()}`}
+                      title={`${event.eventName}, ${timeRange}`}
+                      aria-label={`${event.eventName}, ${timeRange}`}
                       onClick={() => onEventClick?.(event)}
                     >
-                      <p
-                        className={`text-[10px] font-bold ${eventColorScheme.textPrimary} truncate`}
+                      <span
+                        className={`block text-xs font-bold ${eventColorScheme.textPrimary} truncate`}
                       >
                         {event.eventName}
-                      </p>
-                      <p
+                      </span>
+                      <span
                         suppressHydrationWarning
-                        className={`text-[9px] ${eventColorScheme.textSecondary} truncate`}
+                        className={`block text-xs ${eventColorScheme.textSecondary} truncate`}
                       >
                         {new Date(event.startTime).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -262,8 +261,8 @@ export default function TimelineChart({
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
-                      </p>
-                    </div>
+                      </span>
+                    </button>
                   );
                 })}
               </div>

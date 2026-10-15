@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 
 /**
  * Email Modal for sending confirmation/conflict emails to reservants.
@@ -11,6 +12,7 @@ import { useState } from "react";
  * - onSent: callback when email is sent successfully
  */
 export default function EmailModal({ reservation, onClose, onSent }) {
+  const dialogRef = useAccessibleDialog(onClose);
   const [emailType, setEmailType] = useState("auto");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -85,22 +87,22 @@ export default function EmailModal({ reservation, onClose, onSent }) {
   }
 
   return (
-    <div
+    <div role="presentation"
       className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-overlay"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#192233] w-full max-w-[480px] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col modal-content">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="email-title" tabIndex={-1} className="bg-[#192233] w-full max-w-[480px] rounded-xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col modal-content">
         {/* Header */}
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-indigo-400">
+                <span aria-hidden="true" className="material-symbols-outlined text-indigo-400">
                   mail
                 </span>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-100">
+                <h2 id="email-title" className="text-lg font-bold text-slate-100">
                   Send Email
                 </h2>
                 <p className="text-slate-400 text-xs mt-0.5">
@@ -109,10 +111,11 @@ export default function EmailModal({ reservation, onClose, onSent }) {
               </div>
             </div>
             <button
+              aria-label="Close"
               onClick={onClose}
               className="text-slate-400 hover:text-slate-200 transition-colors"
             >
-              <span className="material-symbols-outlined">close</span>
+              <span aria-hidden="true" className="material-symbols-outlined">close</span>
             </button>
           </div>
         </div>
@@ -125,13 +128,13 @@ export default function EmailModal({ reservation, onClose, onSent }) {
               {reservation?.eventName}
             </p>
             <p className="text-xs text-slate-400">{reservation?.room}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-400">
               {fmtDate(reservation?.startTime)} &middot;{" "}
               {fmtTime(reservation?.startTime)} &ndash;{" "}
               {fmtTime(reservation?.endTime)}
             </p>
             {reservation?.fullName && (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 Booked by: {reservation.fullName}
               </p>
             )}
@@ -139,11 +142,11 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* Recipient */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-slate-300">
+            <p className="text-sm font-medium text-slate-300">
               Recipient Email
-            </label>
+            </p>
             <div className="flex items-center gap-2 h-10 px-4 bg-slate-800/50 border border-slate-700 rounded-lg">
-              <span className="material-symbols-outlined text-slate-500 text-[18px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-[18px]">
                 email
               </span>
               <span
@@ -156,10 +159,10 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* Email Type */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-slate-300">
+            <p id="email-type-label" className="text-sm font-medium text-slate-300">
               Email Type
-            </label>
-            <div className="grid grid-cols-3 gap-2">
+            </p>
+            <div role="group" aria-labelledby="email-type-label" className="grid grid-cols-3 gap-2">
               {[
                 {
                   value: "auto",
@@ -183,6 +186,7 @@ export default function EmailModal({ reservation, onClose, onSent }) {
                 <button
                   key={opt.value}
                   type="button"
+                  aria-pressed={emailType === opt.value}
                   onClick={() => setEmailType(opt.value)}
                   className={`p-3 rounded-lg border text-center transition-all ${
                     emailType === opt.value
@@ -190,7 +194,7 @@ export default function EmailModal({ reservation, onClose, onSent }) {
                       : "border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[20px] block mb-1">
+                  <span aria-hidden="true" className="material-symbols-outlined text-[20px] block mb-1">
                     {opt.icon}
                   </span>
                   <p className="text-xs font-semibold">{opt.label}</p>
@@ -201,7 +205,7 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* CC Notice */}
           <div className="p-3 bg-[#0f49bd]/10 border border-[#0f49bd]/20 rounded-lg flex gap-2 items-start">
-            <span className="material-symbols-outlined text-[#0f49bd] text-[18px] shrink-0 mt-0.5">
+            <span aria-hidden="true" className="material-symbols-outlined text-[#0f49bd] text-[18px] shrink-0 mt-0.5">
               info
             </span>
             <p className="text-xs text-slate-400 leading-relaxed">
@@ -212,8 +216,8 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* Success Message */}
           {success && (
-            <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <span className="material-symbols-outlined text-emerald-400 text-lg">
+            <div role="status" className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+              <span aria-hidden="true" className="material-symbols-outlined text-emerald-400 text-lg">
                 check_circle
               </span>
               <div>
@@ -230,8 +234,8 @@ export default function EmailModal({ reservation, onClose, onSent }) {
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <span className="material-symbols-outlined text-red-400 text-lg">
+            <div role="alert" className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-lg">
                 error
               </span>
               <p className="text-sm text-red-400">{error}</p>
@@ -281,7 +285,7 @@ export default function EmailModal({ reservation, onClose, onSent }) {
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-[18px]">
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
                     send
                   </span>
                   <span>Send Email</span>

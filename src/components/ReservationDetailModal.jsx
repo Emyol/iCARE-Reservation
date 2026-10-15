@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useAdmin } from "@/components/AdminProvider";
 import ConflictOverride from "@/components/ConflictOverride";
+import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 import { ROOMS } from "@/lib/rooms";
 import { reservationFingerprint } from "@/lib/reservationRules";
 
@@ -14,6 +15,7 @@ export default function ReservationDetailModal({
   onUpdate,
 }) {
   const { isAdmin } = useAdmin();
+  const dialogRef = useAccessibleDialog(onClose);
   const [mode, setMode] = useState("view"); // "view" | "edit" | "confirmDelete"
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -136,8 +138,8 @@ export default function ReservationDetailModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative glass-panel border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div aria-hidden="true" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="detail-title" tabIndex={-1} className="relative glass-panel border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className={`p-5 border-b border-white/5 flex items-center gap-3`}>
           <div
@@ -145,7 +147,7 @@ export default function ReservationDetailModal({
               isAVR ? "bg-emerald-500/10" : "bg-blue-500/10"
             }`}
           >
-            <span
+            <span aria-hidden="true"
               className={`material-symbols-outlined text-[20px] ${
                 isAVR ? "text-emerald-400" : "text-blue-400"
               }`}
@@ -154,7 +156,7 @@ export default function ReservationDetailModal({
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-white truncate">
+            <h3 id="detail-title" className="text-base font-bold text-white truncate">
               {reservation.eventName}
             </h3>
             <p className="text-xs text-slate-400 truncate">
@@ -163,9 +165,10 @@ export default function ReservationDetailModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="text-slate-400 hover:text-white transition-colors"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span aria-hidden="true" className="material-symbols-outlined">close</span>
           </button>
         </div>
 
@@ -266,14 +269,14 @@ export default function ReservationDetailModal({
                     onClick={() => setMode("edit")}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-500/20 border border-indigo-500/30 rounded-lg hover:bg-indigo-500/30 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-[18px]">edit</span>
                     Edit
                   </button>
                   <button
                     onClick={() => setMode("confirmDelete")}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-[18px]">delete</span>
                     Delete
                   </button>
                 </div>
@@ -284,8 +287,9 @@ export default function ReservationDetailModal({
           {mode === "edit" && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1 font-medium">Room</label>
+                <label htmlFor="edit-room" className="block text-xs text-slate-400 mb-1 font-medium">Room</label>
                 <select
+                  id="edit-room"
                   value={editFields.room}
                   onChange={(e) =>
                     setEditFields({ ...editFields, room: e.target.value })
@@ -300,11 +304,12 @@ export default function ReservationDetailModal({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1 font-medium">
+                <label htmlFor="edit-event" className="block text-xs text-slate-400 mb-1 font-medium">
                   Event / Purpose
                 </label>
                 <input
                   type="text"
+                  id="edit-event"
                   value={editFields.eventName}
                   onChange={(e) =>
                     setEditFields({ ...editFields, eventName: e.target.value })
@@ -364,11 +369,12 @@ export default function ReservationDetailModal({
                 />
               )}
               <div>
-                <label className="block text-xs text-slate-400 mb-1 font-medium">
+                <label htmlFor="edit-name" className="block text-xs text-slate-400 mb-1 font-medium">
                   Full Name
                 </label>
                 <input
                   type="text"
+                  id="edit-name"
                   value={editFields.fullName}
                   onChange={(e) =>
                     setEditFields({ ...editFields, fullName: e.target.value })
@@ -377,11 +383,12 @@ export default function ReservationDetailModal({
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1 font-medium">
+                <label htmlFor="edit-attendees" className="block text-xs text-slate-400 mb-1 font-medium">
                   Attendees
                 </label>
                 <input
                   type="text"
+                  id="edit-attendees"
                   value={editFields.attendees}
                   onChange={(e) =>
                     setEditFields({ ...editFields, attendees: e.target.value })
@@ -409,7 +416,7 @@ export default function ReservationDetailModal({
 
           {mode === "confirmDelete" && (
             <div className="text-center space-y-4 py-4">
-              <span className="material-symbols-outlined text-red-400 text-5xl block">
+              <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-5xl block">
                 warning
               </span>
               <div>
@@ -444,11 +451,11 @@ export default function ReservationDetailModal({
 function DetailField({ icon, label, value, suppressHydrationWarning }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="material-symbols-outlined text-slate-500 text-[16px] mt-0.5">
+      <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-[16px] mt-0.5">
         {icon}
       </span>
       <div>
-        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
           {label}
         </p>
         <p
