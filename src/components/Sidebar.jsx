@@ -10,6 +10,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
+  CalendarClock,
   LayoutDashboard,
   DoorOpen,
   CalendarDays,
@@ -32,6 +33,11 @@ export default function Sidebar({ isAdmin, onLoginClick, onLogout }) {
 
           {/* Navigation Links */}
           <div className="mt-8 flex flex-col gap-2">
+            <SidebarNavLink
+              href="/availability"
+              label="Availability"
+              icon={<CalendarClock className="h-5 w-5 flex-shrink-0" />}
+            />
             <SidebarNavLink
               href="/dashboard"
               label="Dashboard"
