@@ -244,6 +244,20 @@ export default function ReservationDetailModal({
                   value={reservation.recipientEmail}
                 />
               )}
+              {isAdmin && reservation.equipment && (
+                <DetailField
+                  icon="build"
+                  label="Setup / Equipment"
+                  value={reservation.equipment}
+                />
+              )}
+              {isAdmin && reservation.notes && (
+                <DetailField
+                  icon="sticky_note_2"
+                  label="Additional Notes"
+                  value={reservation.notes}
+                />
+              )}
 
               {/* Admin Actions */}
               {isAdmin && (

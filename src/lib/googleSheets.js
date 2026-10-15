@@ -26,10 +26,12 @@ let _auditTabVerified = false;    // true once Audit Log tab is confirmed to exi
  * N: Department/Office
  * O: Role/Designation
  * P: Will you need assistance with the room setup or equipment?
+ * Q: Additional Notes or Requests
  */
 
 const SHEET_TAB = "Venue Reservation";
-const LAST_SHEET_COLUMN = "P";
+const LAST_SHEET_COLUMN = "Q";
+const COLUMN_COUNT = 17;
 
 /**
  * Get the numeric sheetId for a tab by its title.
@@ -98,6 +100,7 @@ const COL = {
   DEPARTMENT: 13,
   ROLE: 14,
   EQUIPMENT: 15,
+  NOTES: 16,
 };
 
 function getSheets() {
@@ -229,6 +232,8 @@ export async function getReservations() {
         endTime,
         fullName,
         department: row[COL.DEPARTMENT] || "",
+        equipment: row[COL.EQUIPMENT] || "",
+        notes: row[COL.NOTES] || "",
         attendees: row[COL.ATTENDEES] || "",
         emailSent,
         recipientEmail,
@@ -299,7 +304,7 @@ export async function appendReservation({
     timeZone: "Asia/Manila",
   });
 
-  // Build row matching the 16-column schema (A:P)
+  // Build row matching the column schema (A:P; Q, notes, is left empty)
   // A: Confirmation Email (sent status) → empty (admin booking)
   // B: Confirmation Email (body text)   → empty (admin booking)
   // C: Timestamp           → current time
@@ -422,7 +427,7 @@ export async function updateReservation(rowIndex, fields) {
     spreadsheetId,
     range: `'${SHEET_TAB}'!A${rowIndex}:${LAST_SHEET_COLUMN}${rowIndex}`,
   });
-  const row = current.data.values?.[0] || new Array(16).fill("");
+  const row = current.data.values?.[0] || new Array(COLUMN_COUNT).fill("");
 
   // Helper for date/time formatting
   const pad2 = (n) => n.toString().padStart(2, "0");
@@ -492,7 +497,7 @@ export async function deleteReservation(rowIndex) {
   const sheets = getSheets();
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-  const emptyRow = new Array(16).fill("");
+  const emptyRow = new Array(COLUMN_COUNT).fill("");
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `'${SHEET_TAB}'!A${rowIndex}:${LAST_SHEET_COLUMN}${rowIndex}`,
