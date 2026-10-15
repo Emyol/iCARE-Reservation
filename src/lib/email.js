@@ -84,6 +84,21 @@ function formatTimeForEmail(dtStr) {
 
 /* ─── HTML Email Templates ─── */
 
+// Names and rooms come from the public Google Form, so they are escaped
+// before going into HTML sent from an admin's mailbox.
+function escapeHtml(value) {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+  );
+}
+
+function escapeAll(fields) {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [key, escapeHtml(value)]),
+  );
+}
+
 function emailWrapper(content) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -268,15 +283,17 @@ export async function sendConfirmationEmail({ admin, reservation }) {
     throw new Error("No recipient email address available");
   }
 
-  const html = buildConfirmationHtml({
-    fullName,
-    room,
-    eventName,
-    date: formatDateForEmail(startTime),
-    startTime: formatTimeForEmail(startTime),
-    endTime: formatTimeForEmail(endTime),
-    adminName: admin.name,
-  });
+  const html = buildConfirmationHtml(
+    escapeAll({
+      fullName,
+      room,
+      eventName,
+      date: formatDateForEmail(startTime),
+      startTime: formatTimeForEmail(startTime),
+      endTime: formatTimeForEmail(endTime),
+      adminName: admin.name,
+    }),
+  );
 
   const mailOptions = {
     from: `"iCARE Room Reservation" <${admin.email}>`,
@@ -307,19 +324,21 @@ export async function sendConflictEmail({
     throw new Error("No recipient email address available");
   }
 
-  const html = buildConflictHtml({
-    fullName,
-    room,
-    eventName,
-    date: formatDateForEmail(startTime),
-    startTime: formatTimeForEmail(startTime),
-    endTime: formatTimeForEmail(endTime),
-    conflictStart: formatTimeForEmail(conflictingReservation.startTime),
-    conflictEnd: formatTimeForEmail(conflictingReservation.endTime),
-    conflictEvent: conflictingReservation.eventName,
-    conflictSubmittedOn: conflictingReservation.timestamp || null,
-    adminName: admin.name,
-  });
+  const html = buildConflictHtml(
+    escapeAll({
+      fullName,
+      room,
+      eventName,
+      date: formatDateForEmail(startTime),
+      startTime: formatTimeForEmail(startTime),
+      endTime: formatTimeForEmail(endTime),
+      conflictStart: formatTimeForEmail(conflictingReservation.startTime),
+      conflictEnd: formatTimeForEmail(conflictingReservation.endTime),
+      conflictEvent: conflictingReservation.eventName,
+      conflictSubmittedOn: conflictingReservation.timestamp || "",
+      adminName: admin.name,
+    }),
+  );
 
   const mailOptions = {
     from: `"iCARE Room Reservation" <${admin.email}>`,

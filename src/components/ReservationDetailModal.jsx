@@ -2,17 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useAdmin } from "@/components/AdminProvider";
+import ConflictOverride from "@/components/ConflictOverride";
+import { ROOMS } from "@/lib/rooms";
+import { reservationFingerprint } from "@/lib/reservationRules";
 
-const ROOM_OPTIONS = [
-  {
-    value: "Audio-Visual Room / Enhancement Area (Capacity: 40)",
-    label: "Audio-Visual Room",
-  },
-  {
-    value: "Individual Training / Small Group Discussion Room (Capacity: 10)",
-    label: "Training Room",
-  },
-];
+const ROOM_OPTIONS = ROOMS;
 
 export default function ReservationDetailModal({
   reservation,
@@ -23,16 +17,38 @@ export default function ReservationDetailModal({
   const [mode, setMode] = useState("view"); // "view" | "edit" | "confirmDelete"
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [stale, setStale] = useState(false);
+  const [conflicts, setConflicts] = useState(null);
+  const [override, setOverride] = useState(false);
+  const [reason, setReason] = useState("");
 
-  // Edit form state
+  // Edit form state. One date for both times: bookings can't span midnight.
   const [editFields, setEditFields] = useState({
     room: reservation.room,
     eventName: reservation.eventName,
-    startTime: reservation.startTime?.slice(0, 16) || "",
-    endTime: reservation.endTime?.slice(0, 16) || "",
+    date: reservation.startTime?.slice(0, 10) || "",
+    start: reservation.startTime?.slice(11, 16) || "",
+    end: reservation.endTime?.slice(11, 16) || "",
     fullName: reservation.fullName || "",
     attendees: reservation.attendees || "",
   });
+
+  // A changed slot needs a fresh conflict check.
+  function setSlotField(key, value) {
+    setEditFields((f) => ({ ...f, [key]: value }));
+    setConflicts(null);
+    setOverride(false);
+  }
+
+  // Sent with every change so the server can refuse it if the sheet row
+  // no longer holds this reservation.
+  const expected = reservationFingerprint(reservation);
+
+  async function readError(res) {
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 409 && data.stale) setStale(true);
+    return data;
+  }
 
   const formatDate = (iso) =>
     new Date(iso).toLocaleDateString("en-US", {
@@ -59,16 +75,32 @@ export default function ReservationDetailModal({
   }, [reservation.room]);
 
   async function handleSave() {
+    if (conflicts && override && !reason.trim()) {
+      setError("Enter a reason for booking over the overlap.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
+      const { date, start, end, ...rest } = editFields;
       const res = await fetch(`/api/reservations/${reservation.rowIndex}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editFields),
+        body: JSON.stringify({
+          ...rest,
+          startTime: `${date}T${start}`,
+          endTime: `${date}T${end}`,
+          expected,
+          override: Boolean(conflicts && override),
+          reason: reason.trim(),
+        }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readError(res);
+        if (res.status === 409 && data.needsOverride) {
+          setConflicts(data.conflicts || []);
+          return;
+        }
         throw new Error(data.error || "Failed to update");
       }
       onUpdate?.();
@@ -86,9 +118,11 @@ export default function ReservationDetailModal({
     try {
       const res = await fetch(`/api/reservations/${reservation.rowIndex}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expected }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readError(res);
         throw new Error(data.error || "Failed to delete");
       }
       onUpdate?.();
@@ -138,8 +172,19 @@ export default function ReservationDetailModal({
         {/* Body */}
         <div className="p-5 space-y-4">
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+            <div role="alert" className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
               {error}
+              {stale && (
+                <button
+                  onClick={() => {
+                    onUpdate?.();
+                    onClose();
+                  }}
+                  className="block mt-2 text-xs font-semibold text-teal-300 underline"
+                >
+                  Reload the schedule
+                </button>
+              )}
             </div>
           )}
 
@@ -162,28 +207,37 @@ export default function ReservationDetailModal({
                   }
                   suppressHydrationWarning
                 />
-                <DetailField
-                  icon="person"
-                  label="Organizer"
-                  value={reservation.fullName || "—"}
-                />
-                <DetailField
-                  icon="group"
-                  label="Attendees"
-                  value={reservation.attendees || "—"}
-                />
-                <DetailField
-                  icon="apartment"
-                  label="Department"
-                  value={reservation.department || "—"}
-                />
-                <DetailField
-                  icon="mail"
-                  label="Email Status"
-                  value={reservation.emailSent ? "Sent ✅" : "Not sent"}
-                />
+                {isAdmin && (
+                  <>
+                    <DetailField
+                      icon="person"
+                      label="Organizer"
+                      value={reservation.fullName || "—"}
+                    />
+                    <DetailField
+                      icon="group"
+                      label="Attendees"
+                      value={reservation.attendees || "—"}
+                    />
+                    <DetailField
+                      icon="apartment"
+                      label="Department"
+                      value={reservation.department || "—"}
+                    />
+                    <DetailField
+                      icon="mail"
+                      label="Email Status"
+                      value={reservation.emailSent ? "Sent ✅" : "Not sent"}
+                    />
+                  </>
+                )}
               </div>
-              {reservation.recipientEmail && (
+              {!isAdmin && (
+                <p className="text-xs text-slate-400">
+                  Organizer details are visible to iCARE staff only.
+                </p>
+              )}
+              {isAdmin && reservation.recipientEmail && (
                 <DetailField
                   icon="alternate_email"
                   label="Contact Email"
@@ -244,34 +298,57 @@ export default function ReservationDetailModal({
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1 font-medium">
-                    Start Time
+                  <label htmlFor="edit-date" className="block text-xs text-slate-400 mb-1 font-medium">
+                    Date
                   </label>
                   <input
-                    type="datetime-local"
-                    value={editFields.startTime}
-                    onChange={(e) =>
-                      setEditFields({ ...editFields, startTime: e.target.value })
-                    }
+                    id="edit-date"
+                    type="date"
+                    value={editFields.date}
+                    onChange={(e) => setSlotField("date", e.target.value)}
                     className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none [color-scheme:dark]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1 font-medium">
+                  <label htmlFor="edit-start" className="block text-xs text-slate-400 mb-1 font-medium">
+                    Start Time
+                  </label>
+                  <input
+                    id="edit-start"
+                    type="time"
+                    step="900"
+                    value={editFields.start}
+                    onChange={(e) => setSlotField("start", e.target.value)}
+                    className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none [color-scheme:dark]"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-end" className="block text-xs text-slate-400 mb-1 font-medium">
                     End Time
                   </label>
                   <input
-                    type="datetime-local"
-                    value={editFields.endTime}
-                    onChange={(e) =>
-                      setEditFields({ ...editFields, endTime: e.target.value })
-                    }
+                    id="edit-end"
+                    type="time"
+                    step="900"
+                    value={editFields.end}
+                    onChange={(e) => setSlotField("end", e.target.value)}
                     className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 outline-none [color-scheme:dark]"
                   />
                 </div>
               </div>
+              {conflicts && (
+                <ConflictOverride
+                  conflicts={conflicts}
+                  override={override}
+                  onOverrideChange={setOverride}
+                  reason={reason}
+                  onReasonChange={setReason}
+                  disabled={saving}
+                  idPrefix="edit"
+                />
+              )}
               <div>
                 <label className="block text-xs text-slate-400 mb-1 font-medium">
                   Full Name
@@ -301,10 +378,10 @@ export default function ReservationDetailModal({
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={handleSave}
-                  disabled={saving}
+                  disabled={saving || Boolean(conflicts && !override)}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold text-white auro-button rounded-lg disabled:opacity-50 transition-opacity"
                 >
-                  {saving ? "Saving..." : "Save Changes"}
+                  {saving ? "Saving..." : conflicts ? "Save Anyway" : "Save Changes"}
                 </button>
                 <button
                   onClick={() => setMode("view")}

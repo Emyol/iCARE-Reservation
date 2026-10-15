@@ -33,11 +33,12 @@ export default function SchedulePage() {
     }
   }, []);
 
+  // Refetch when admin state changes: the API returns full rows only to admins.
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, isAdmin]);
 
   // Transform reservations into calendar data format
   const calendarData = useMemo(() => {

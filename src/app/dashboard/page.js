@@ -44,9 +44,10 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Refetch when admin state changes: the API returns full rows only to admins.
   useEffect(() => {
     fetchReservations();
-  }, [fetchReservations]);
+  }, [fetchReservations, isAdmin]);
 
   // Auto-refresh every 30 seconds to pick up new Google Form submissions
   // without requiring a manual page reload.
