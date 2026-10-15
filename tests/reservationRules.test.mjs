@@ -7,6 +7,8 @@ import {
   findOverlaps,
   fingerprintMatches,
   toPublicReservation,
+  statusOf,
+  publicReservations,
 } from "../src/lib/reservationRules.js";
 
 const AVR = "Audio-Visual Room / Enhancement Area (Capacity: 40)";
@@ -109,3 +111,31 @@ test("public view hides who booked", () => {
   const row = { room: AVR, startTime: "a", endTime: "b", eventName: "Thesis defense", fullName: "Dela Cruz, J.", recipientEmail: "x@feutech.edu.ph", department: "CS", attendees: "20", timestamp: "t", rowIndex: 4, emailSent: true };
   assert.deepEqual(toPublicReservation(row), { room: AVR, startTime: "a", endTime: "b", eventName: "Reserved", timestamp: "t" });
 });
+
+test("statusOf reads the email columns: none sent, conflict notice, anything else", () => {
+  assert.equal(statusOf({ emailSent: false, emailNote: "" }), "pending");
+  assert.equal(statusOf({ emailSent: false, emailNote: "Conflict notice sent by X" }), "pending");
+  assert.equal(statusOf({ emailSent: true, emailNote: "Conflict notice sent by Ana on 10/15/2026" }), "declined");
+  assert.equal(statusOf({ emailSent: true, emailNote: "Confirmation sent by Ana on 10/15/2026" }), "confirmed");
+  assert.equal(statusOf({ emailSent: true, emailNote: "Dear student, your booking..." }), "confirmed");
+  assert.equal(statusOf({ emailSent: true }), "confirmed");
+});
+
+test("a declined request no longer counts as an overlap", () => {
+  const declined = { ...valid, rowIndex: 7, status: "declined" };
+  const kept = { ...valid, rowIndex: 8, status: "confirmed" };
+  assert.deepEqual(findOverlaps(valid, [declined]), []);
+  assert.deepEqual(findOverlaps(valid, [declined, kept]).map((r) => r.rowIndex), [8]);
+});
+
+test("the public list drops declined requests and personal details", () => {
+  const rows = [
+    { ...valid, fullName: "Cruz, Ana", status: "confirmed", timestamp: "t1" },
+    { ...valid, fullName: "Reyes, Ben", status: "declined", timestamp: "t2" },
+  ];
+  const out = publicReservations(rows);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].timestamp, "t1");
+  assert.equal(out[0].fullName, undefined);
+});
+

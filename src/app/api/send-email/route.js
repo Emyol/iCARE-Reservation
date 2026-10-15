@@ -14,7 +14,8 @@ import {
  *
  * Body: {
  *   reservation: { room, eventName, startTime, endTime, fullName, recipientEmail, rowIndex },
- *   emailType: "confirmation" | "conflict"
+ *   emailType: "confirmation" | "conflict",
+ *   conflictWithRow: optional row of the booking that keeps the room (for "conflict")
  * }
  *
  * The system auto-detects conflicts if emailType is not specified.
@@ -53,7 +54,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { reservation, emailType } = body;
+    const { reservation, emailType, conflictWithRow } = body;
 
     if (!reservation) {
       return NextResponse.json(
@@ -81,10 +82,21 @@ export async function POST(request) {
       type = conflictingReservation ? "conflict" : "confirmation";
     }
 
-    // If type is conflict but no conflicting reservation was determined, try to find one
+    // A "conflict" email declines this request in favour of another booking:
+    // the one staff chose to keep, or else the first overlap found.
     if (type === "conflict" && !conflictingReservation) {
       const allReservations = await getReservations();
-      conflictingReservation = findConflict(reservation, allReservations);
+      conflictingReservation =
+        (conflictWithRow && allReservations.find((r) => r.rowIndex === Number(conflictWithRow))) ||
+        findConflict(reservation, allReservations);
+    }
+
+    // Never fall back to a confirmation when a decline was asked for.
+    if (type === "conflict" && !conflictingReservation) {
+      return NextResponse.json(
+        { error: "No overlapping booking was found, so the room-not-available email wasn't sent." },
+        { status: 409 },
+      );
     }
 
     // Send the email

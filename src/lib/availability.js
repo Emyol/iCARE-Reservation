@@ -64,7 +64,8 @@ export function toClockInput(minutes) {
 /** Reservations starting on `date`, with numeric start/end added. */
 export function bookingsOn(reservations, date) {
   return reservations
-    .filter((r) => r.startTime && r.endTime && dateOf(r.startTime) === date)
+    // Declined requests (staff only see these) no longer hold the room.
+    .filter((r) => r.status !== "declined" && r.startTime && r.endTime && dateOf(r.startTime) === date)
     .map((r) => ({ ...r, start: minutesOf(r.startTime), end: minutesOf(r.endTime) }))
     .filter((r) => r.end > r.start);
 }

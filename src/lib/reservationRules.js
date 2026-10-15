@@ -90,6 +90,20 @@ export function validateReservation(
   };
 }
 
+/**
+ * Where a request stands. The sheet has no status column, so it is read from
+ * the email columns: A is TRUE once an email went out, and B holds the note
+ * the app writes. The "room not available" email (B starts "Conflict notice
+ * sent") declines; any other email confirms; no email yet means pending.
+ */
+export function statusOf({ emailSent, emailNote }) {
+  if (!emailSent) return "pending";
+  return /^conflict notice sent/i.test((emailNote || "").trim()) ? "declined" : "confirmed";
+}
+
+/** Declined requests no longer hold the room. */
+export const holdsRoom = (r) => r.status !== "declined";
+
 /** Reservations in the same room whose time ranges overlap the candidate. */
 export function findOverlaps(candidate, reservations, { excludeRowIndex } = {}) {
   const room = (candidate.room || "").trim();
@@ -98,6 +112,7 @@ export function findOverlaps(candidate, reservations, { excludeRowIndex } = {}) 
   if (!start || !end) return [];
   return reservations.filter((r) => {
     if (excludeRowIndex !== undefined && r.rowIndex === excludeRowIndex) return false;
+    if (!holdsRoom(r)) return false;
     if ((r.room || "").trim() !== room) return false;
     const rStart = normalizeDateTime(r.startTime);
     const rEnd = normalizeDateTime(r.endTime);
@@ -151,4 +166,9 @@ export function toPublicReservation(r) {
     eventName: "Reserved",
     timestamp: r.timestamp,
   };
+}
+
+/** The public list: bookings that hold a room, without who made them. */
+export function publicReservations(reservations) {
+  return reservations.filter(holdsRoom).map(toPublicReservation);
 }

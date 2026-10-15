@@ -8,6 +8,7 @@ import GlassShell from "@/components/glass/GlassShell";
 import { EASE_OUT } from "@/components/glass/motion";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import { ROOMS, findRoom } from "@/lib/rooms";
+import { holdsRoom } from "@/lib/reservationRules";
 
 const monthLabel = (key) =>
   new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" });
@@ -35,7 +36,7 @@ export default function ReportsPage() {
     return () => clearInterval(refresh);
   }, [fetchData]);
 
-  const dated = reservations.filter((r) => r.startTime);
+  const dated = reservations.filter((r) => r.startTime && holdsRoom(r));
   const stats = [
     { label: "All bookings", value: dated.length },
     ...ROOMS.map((room) => ({
