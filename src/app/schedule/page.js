@@ -1,311 +1,235 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { isSameDay } from "date-fns";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, ChevronLeft, ChevronRight, Mail, MailCheck, RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
+import GlassShell from "@/components/glass/GlassShell";
+import { dealIn, slideByDirection } from "@/components/glass/motion";
 import AdminLoginModal from "@/components/AdminLoginModal";
 import EmailModal from "@/components/EmailModal";
 import ReservationDetailModal from "@/components/ReservationDetailModal";
-import Sidebar from "@/components/Sidebar";
-import { FullScreenCalendar } from "@/components/ui/fullscreen-calendar";
-import Link from "next/link";
+import MonthGrid, { ROOM_MARK, dayBookings } from "@/components/calendar/MonthGrid";
+import { useHydrated } from "@/hooks/use-hydrated";
+import { manilaNow } from "@/lib/reservationRules";
+import { ROOMS } from "@/lib/rooms";
+import { formatRange } from "@/lib/availability";
+
+const today = () => manilaNow().slice(0, 10);
+
+function shiftMonth(month, n) {
+  const d = new Date(`${month}-01T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  return d.toISOString().slice(0, 7);
+}
+
+const monthTitle = (month) =>
+  new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" });
+
+const longDay = (date) =>
+  new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" });
 
 export default function SchedulePage() {
-  const { isAdmin, login, logout } = useAdmin();
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [emailTarget, setEmailTarget] = useState(null);
+  const { isAdmin, login } = useAdmin();
+  const hydrated = useHydrated();
+  const reduceMotion = useReducedMotion();
+  const [month, setMonth] = useState(() => today().slice(0, 7));
+  const [selected, setSelected] = useState(today);
+  const [direction, setDirection] = useState(0);
   const [reservations, setReservations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedReservation, setSelectedReservation] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [status, setStatus] = useState("loading"); // loading | ready | error
+
+  const [showLogin, setShowLogin] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [emailTarget, setEmailTarget] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/reservations", { cache: "no-store" });
       if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      const data = await res.json();
-      setReservations(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setReservations(await res.json());
+      setStatus("ready");
+    } catch {
+      setStatus("error");
     }
   }, []);
 
   // Refetch when admin state changes: the API returns full rows only to admins.
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60_000);
-    return () => clearInterval(interval);
+    const refresh = setInterval(fetchData, 60_000);
+    return () => clearInterval(refresh);
   }, [fetchData, isAdmin]);
 
-  // Transform reservations into calendar data format
-  const calendarData = useMemo(() => {
-    const dateMap = {};
-    reservations.forEach((r) => {
-      const d = new Date(r.startTime);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      if (!dateMap[key]) {
-        dateMap[key] = {
-          day: new Date(d.getFullYear(), d.getMonth(), d.getDate()),
-          events: [],
-        };
-      }
-      const startTime = d.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const endTime = new Date(r.endTime).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      dateMap[key].events.push({
-        id: r.rowIndex || key + "-" + dateMap[key].events.length,
-        name: r.eventName,
-        time: `${startTime} – ${endTime}`,
-        datetime: r.startTime,
-        room: r.room,
-        _raw: r,
-      });
-    });
-    return Object.values(dateMap);
-  }, [reservations]);
-
-  // Filtered list for selected date
-  const filtered = useMemo(() => {
-    return reservations.filter((r) => {
-      const d = new Date(r.startTime);
-      const dayDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      return isSameDay(dayDate, selectedDate);
-    });
-  }, [reservations, selectedDate]);
-
-  function handleLogin(adminInfo) {
-    login(adminInfo);
-    setShowLoginModal(false);
+  function goToMonth(next) {
+    setDirection(next > month ? 1 : next < month ? -1 : 0);
+    setMonth(next);
   }
 
-  function handleEventClick(event) {
-    if (event._raw) {
-      setSelectedReservation(event._raw);
-    }
+  function selectDay(date) {
+    setSelected(date);
+    if (date.slice(0, 7) !== month) goToMonth(date.slice(0, 7));
   }
 
-  function handleDaySelect(day) {
-    setSelectedDate(day);
-  }
-
-  const formatTime = (iso) =>
-    new Date(iso).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const now = today();
+  const items = dayBookings(reservations, selected);
+  const slide = reduceMotion ? 0 : direction;
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      <Sidebar
-        isAdmin={isAdmin}
-        onLoginClick={() => setShowLoginModal(true)}
-        onLogout={logout}
-      />
-
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:px-8 sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              aria-label="Back to dashboard"
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
-                arrow_back
-              </span>
-            </Link>
-            <h2 className="text-lg md:text-xl font-bold tracking-tight">
-              <span className="text-teal-400">iCARE</span> Schedule
-            </h2>
-          </div>
-        </header>
-
-        <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto w-full">
-          {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Fullscreen Calendar */}
-          <div className="glass-panel rounded-xl border border-white/5 overflow-hidden">
-            <FullScreenCalendar
-              data={calendarData}
-              onEventClick={handleEventClick}
-              onDaySelect={handleDaySelect}
-            />
-          </div>
-
-          {/* Selected Day Reservations */}
-          <div>
-            <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-              <span aria-hidden="true" className="material-symbols-outlined text-[18px] text-teal-400">
-                event
-              </span>
-              {selectedDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
-              <span className="text-slate-400 font-normal ml-1">
-                ({filtered.length} reservation{filtered.length !== 1 ? "s" : ""}
-                )
-              </span>
-            </h4>
-
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="skeleton h-20 rounded-xl" />
-                ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="glass-panel rounded-xl border border-white/5 p-12 text-center">
-                <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-4xl mb-3 block">
-                  event_busy
-                </span>
-                <p className="text-slate-400 text-sm font-medium">
-                  No reservations on this date
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filtered
-                  .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
-                  .map((r, i) => {
-                    const isAVR = r.room.toLowerCase().includes("audio-visual");
-                    return (
-                      <div role="presentation"
-                        key={i}
-                        onClick={() => setSelectedReservation(r)}
-                        className={`w-full text-left glass-panel rounded-xl border p-4 flex items-center gap-4 transition-all hover:scale-[1.01] cursor-pointer ${
-                          isAVR
-                            ? "border-emerald-500/20 hover:border-emerald-500/40"
-                            : "border-blue-500/20 hover:border-blue-500/40"
-                        }`}
-                      >
-                        <div
-                          className={`size-10 rounded-lg flex items-center justify-center shrink-0 ${
-                            isAVR ? "bg-emerald-500/10" : "bg-blue-500/10"
-                          }`}
-                        >
-                          <span aria-hidden="true"
-                            className={`material-symbols-outlined text-[20px] ${
-                              isAVR ? "text-emerald-400" : "text-blue-400"
-                            }`}
-                          >
-                            {isAVR ? "videocam" : "groups"}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          {/* The card is clickable by mouse; this button is the keyboard and screen-reader target. */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedReservation(r);
-                            }}
-                            className="block max-w-full text-left text-sm font-semibold text-white truncate"
-                          >
-                            {r.eventName}
-                          </button>
-                          <p className="text-xs text-slate-400 truncate">
-                            {r.room}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0 flex items-center gap-2">
-                          <div>
-                            <p
-                              suppressHydrationWarning
-                              className="text-sm font-medium text-slate-200"
-                            >
-                              {formatTime(r.startTime)} –{" "}
-                              {formatTime(r.endTime)}
-                            </p>
-                            {r.fullName && (
-                              <p className="text-xs text-slate-400 mt-0.5">
-                                {r.fullName}
-                              </p>
-                            )}
-                          </div>
-                          {isAdmin && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEmailTarget(r);
-                              }}
-                              className={`size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                                r.emailSent
-                                  ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                                  : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
-                              }`}
-                              title={
-                                r.emailSent
-                                  ? "Email already sent — click to resend"
-                                  : "Send email to reservant"
-                              }
-                              aria-label={
-                                r.emailSent
-                                  ? `Resend email for ${r.eventName}`
-                                  : `Send email for ${r.eventName}`
-                              }
-                            >
-                              <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
-                                {r.emailSent ? "mark_email_read" : "mail"}
-                              </span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
+    <GlassShell title="Calendar" onSignIn={isAdmin ? null : () => setShowLogin(true)}>
+      <div className="lg-chrome flex flex-wrap items-center gap-3 px-4 py-3">
+        <h1 className="lg-title mr-auto">{hydrated ? monthTitle(month) : "Calendar"}</h1>
+        <div className="flex items-center gap-2">
+          <button type="button" aria-label="Previous month" onClick={() => goToMonth(shiftMonth(month, -1))} className="lg-btn lg-btn-secondary lg-btn-icon">
+            <ChevronLeft aria-hidden="true" className="size-5" strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              goToMonth(now.slice(0, 7));
+              setSelected(now);
+            }}
+            className="lg-btn lg-btn-secondary"
+          >
+            Today
+          </button>
+          <button type="button" aria-label="Next month" onClick={() => goToMonth(shiftMonth(month, 1))} className="lg-btn lg-btn-secondary lg-btn-icon">
+            <ChevronRight aria-hidden="true" className="size-5" strokeWidth={2} />
+          </button>
         </div>
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-medium" aria-label="Legend">
+          {ROOMS.map((r) => (
+            <li key={r.value} className="flex items-center gap-2">
+              <span aria-hidden="true" className={`size-2.5 ${ROOM_MARK[r.value].mark}`} />
+              {r.label}
+            </li>
+          ))}
+          <li className="flex items-center gap-2">
+            <span aria-hidden="true" className="size-2.5 rounded-full ring-2 ring-[var(--lg-danger)]" />
+            Overlap
+          </li>
+        </ul>
+      </div>
 
-        <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-400 text-xs">
-            © {new Date().getFullYear()} iCARE Room Reservation System — FEU
-            Institute of Technology
+      {status === "error" && (
+        <div role="alert" className="lg-banner">
+          <p>
+            <strong>Couldn&apos;t load the calendar.</strong> Check your connection and try again.
           </p>
-        </footer>
-      </main>
-      {showLoginModal && (
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("loading");
+              fetchData();
+            }}
+            className="lg-btn lg-btn-secondary"
+          >
+            <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />
+            Retry
+          </button>
+        </div>
+      )}
+
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        {!hydrated || (status === "loading" && reservations.length === 0) ? (
+          <div className="lg-sheet h-[420px] animate-pulse motion-reduce:animate-none" aria-hidden="true" />
+        ) : (
+          <div className="min-w-0 overflow-hidden rounded-[28px]">
+            <AnimatePresence mode="wait" initial={false} custom={slide}>
+              <motion.div key={month} custom={slide} variants={slideByDirection} initial="enter" animate="center" exit="exit">
+                <MonthGrid
+                  reservations={reservations}
+                  month={month}
+                  today={now}
+                  selected={selected}
+                  showNames={isAdmin}
+                  onSelect={selectDay}
+                  onOpenBooking={setDetail}
+                />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        )}
+
+        <section className="lg-pass flex flex-col gap-3 p-5" aria-labelledby="calendar-day-title" aria-live="polite">
+          <div>
+            <h2 id="calendar-day-title" className="text-[19px] font-bold leading-snug">
+              {hydrated ? `${selected === now ? "Today, " : ""}${longDay(selected)}` : "Selected day"}
+            </h2>
+            <p className="text-[14px] lg-muted">
+              {status === "ready" ? `${items.length} booking${items.length === 1 ? "" : "s"}. Times are Philippine time.` : "Loading…"}
+            </p>
+          </div>
+          <ul key={selected} className="flex flex-col gap-2">
+            {items.map((b, i) => (
+              <motion.li key={`${b.rowIndex ?? b.startTime}-${i}`} {...dealIn(i)} className="flex items-stretch gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDetail(b)}
+                  className={`lg-press flex min-w-0 flex-1 flex-col items-start gap-1 rounded-[14px] border px-3 py-2.5 text-left ${
+                    b.conflict
+                      ? "border-[var(--lg-danger)] bg-[var(--lg-danger-soft)]"
+                      : "border-[var(--lg-rim)] bg-[var(--lg-pass-fill)] hover:bg-[var(--lg-sheet-fill)]"
+                  }`}
+                >
+                  <span className="flex w-full items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-bold">{b.eventName}</span>
+                    {b.conflict && <span className="lg-pill lg-pill-conflict">Conflict</span>}
+                  </span>
+                  <span className="flex items-center gap-2 text-[13px]">
+                    <span aria-hidden="true" className={`size-2 ${(ROOM_MARK[(b.room || "").trim()] || {}).mark || "rounded-full bg-[var(--lg-ink-muted)]"}`} />
+                    <span>{(ROOM_MARK[(b.room || "").trim()] || {}).short || b.room}</span>
+                    <span className="lg-num lg-muted">{formatRange(b.start, b.end)}</span>
+                  </span>
+                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setEmailTarget(b)}
+                    aria-label={b.emailSent ? `Resend email for ${b.eventName}` : `Send email for ${b.eventName}`}
+                    className="lg-btn lg-btn-secondary lg-btn-icon self-center"
+                  >
+                    {b.emailSent ? (
+                      <MailCheck aria-hidden="true" className="size-5 text-[var(--lg-free)]" strokeWidth={1.75} />
+                    ) : (
+                      <Mail aria-hidden="true" className="size-5" strokeWidth={1.75} />
+                    )}
+                  </button>
+                )}
+              </motion.li>
+            ))}
+          </ul>
+          {status === "ready" && items.length === 0 && <p className="lg-muted">Nothing booked. Both rooms are free.</p>}
+          {hydrated && selected >= now && (
+            <Link href={`/availability?date=${selected}`} className="lg-btn lg-btn-secondary self-start">
+              See free times this day
+              <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2} />
+            </Link>
+          )}
+        </section>
+      </div>
+
+      {showLogin && (
         <AdminLoginModal
-          onClose={() => setShowLoginModal(false)}
-          onLogin={handleLogin}
-        />
-      )}
-      {emailTarget && (
-        <EmailModal
-          reservation={emailTarget}
-          onClose={() => setEmailTarget(null)}
-          onSent={() => {
-            fetchData();
+          onClose={() => setShowLogin(false)}
+          onLogin={(info) => {
+            login(info);
+            setShowLogin(false);
           }}
         />
       )}
-      {selectedReservation && (
+      {emailTarget && <EmailModal reservation={emailTarget} onClose={() => setEmailTarget(null)} onSent={() => fetchData()} />}
+      {detail && (
         <ReservationDetailModal
-          reservation={selectedReservation}
-          onClose={() => setSelectedReservation(null)}
+          reservation={detail}
+          onClose={() => setDetail(null)}
           onUpdate={() => {
-            setSelectedReservation(null);
-            setLoading(true);
+            setDetail(null);
             fetchData();
           }}
         />
       )}
-    </div>
+    </GlassShell>
   );
 }

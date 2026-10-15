@@ -105,8 +105,12 @@ export default function GlassShell({ title, onSignIn, children }) {
             {!isAdmin && (
               <header className="lg-chrome sticky top-4 z-30 flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
                 <Wordmark />
-                <span aria-hidden="true" className="hidden h-8 w-px bg-[var(--lg-line)] md:block" />
-                <p className="hidden text-[19px] font-semibold md:block">{title}</p>
+                {title && (
+                  <>
+                    <span aria-hidden="true" className="hidden h-8 w-px bg-[var(--lg-line)] md:block" />
+                    <p className="hidden text-[19px] font-semibold md:block">{title}</p>
+                  </>
+                )}
                 <nav aria-label="Main" className="ml-auto hidden items-center gap-1 md:flex">
                   {nav.map((item) => (
                     <TopLink key={item.href} item={item} />
