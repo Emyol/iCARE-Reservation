@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AtSign, Building2, CalendarDays, Clock, Mail, Pencil, StickyNote, Trash2, TriangleAlert, User, Users, Video, Wrench, X } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
 import ConflictOverride from "@/components/ConflictOverride";
 import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
@@ -147,13 +148,11 @@ export default function ReservationDetailModal({
               "bg-[var(--lg-free-soft)]"
             }`}
           >
-            <span aria-hidden="true"
-              className={`material-symbols-outlined text-[20px] ${
-                "text-[var(--lg-free)]"
-              }`}
-            >
-              {isAVR ? "videocam" : "groups"}
-            </span>
+            {isAVR ? (
+              <Video aria-hidden="true" className="size-5 text-[var(--lg-free)]" strokeWidth={1.75} />
+            ) : (
+              <Users aria-hidden="true" className="size-5 text-[var(--lg-free)]" strokeWidth={1.75} />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h3 id="detail-title" className="truncate text-[19px] font-bold">
@@ -168,7 +167,7 @@ export default function ReservationDetailModal({
             aria-label="Close"
             className="lg-btn lg-btn-secondary lg-btn-icon"
           >
-            <span aria-hidden="true" className="material-symbols-outlined">close</span>
+            <X aria-hidden="true" className="size-5" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -195,13 +194,13 @@ export default function ReservationDetailModal({
             <>
               <div className="grid grid-cols-2 gap-4">
                 <DetailField
-                  icon="calendar_today"
+                  icon={CalendarDays}
                   label="Date"
                   value={reservation.startTime ? formatDate(reservation.startTime) : "—"}
                   suppressHydrationWarning
                 />
                 <DetailField
-                  icon="schedule"
+                  icon={Clock}
                   label="Time"
                   value={
                     reservation.startTime
@@ -213,22 +212,22 @@ export default function ReservationDetailModal({
                 {isAdmin && (
                   <>
                     <DetailField
-                      icon="person"
+                      icon={User}
                       label="Organizer"
                       value={reservation.fullName || "—"}
                     />
                     <DetailField
-                      icon="group"
+                      icon={Users}
                       label="Attendees"
                       value={reservation.attendees || "—"}
                     />
                     <DetailField
-                      icon="apartment"
+                      icon={Building2}
                       label="Department"
                       value={reservation.department || "—"}
                     />
                     <DetailField
-                      icon="mail"
+                      icon={Mail}
                       label="Status"
                       value={
                         { pending: "Pending: no email sent yet", confirmed: "Confirmed: email sent", declined: "Declined: room-not-available email sent" }[
@@ -246,21 +245,21 @@ export default function ReservationDetailModal({
               )}
               {isAdmin && reservation.recipientEmail && (
                 <DetailField
-                  icon="alternate_email"
+                  icon={AtSign}
                   label="Contact Email"
                   value={reservation.recipientEmail}
                 />
               )}
               {isAdmin && reservation.equipment && (
                 <DetailField
-                  icon="build"
+                  icon={Wrench}
                   label="Setup / Equipment"
                   value={reservation.equipment}
                 />
               )}
               {isAdmin && reservation.notes && (
                 <DetailField
-                  icon="sticky_note_2"
+                  icon={StickyNote}
                   label="Additional Notes"
                   value={reservation.notes}
                 />
@@ -273,14 +272,14 @@ export default function ReservationDetailModal({
                     onClick={() => setMode("edit")}
                     className="lg-btn lg-btn-secondary flex-1"
                   >
-                    <span aria-hidden="true" className="material-symbols-outlined text-[18px]">edit</span>
+                    <Pencil aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
                     Edit
                   </button>
                   <button
                     onClick={() => setMode("confirmDelete")}
                     className="lg-btn lg-btn-secondary flex-1 text-[var(--lg-danger)]"
                   >
-                    <span aria-hidden="true" className="material-symbols-outlined text-[18px]">delete</span>
+                    <Trash2 aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
                     Delete
                   </button>
                 </div>
@@ -420,9 +419,7 @@ export default function ReservationDetailModal({
 
           {mode === "confirmDelete" && (
             <div className="text-center space-y-4 py-4">
-              <span aria-hidden="true" className="material-symbols-outlined block text-5xl text-[var(--lg-danger)]">
-                warning
-              </span>
+              <TriangleAlert aria-hidden="true" className="block size-12 text-[var(--lg-danger)]" strokeWidth={1.75} />
               <div>
                 <p className="font-semibold">Delete this reservation?</p>
                 <p className="mt-1 text-[14px] lg-muted">
@@ -452,12 +449,10 @@ export default function ReservationDetailModal({
   );
 }
 
-function DetailField({ icon, label, value, suppressHydrationWarning }) {
+function DetailField({ icon: Icon, label, value, suppressHydrationWarning }) {
   return (
     <div className="flex items-start gap-2">
-      <span aria-hidden="true" className="material-symbols-outlined mt-0.5 text-[16px] lg-muted">
-        {icon}
-      </span>
+      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 lg-muted" strokeWidth={1.75} />
       <div>
         <p className="lg-label">
           {label}

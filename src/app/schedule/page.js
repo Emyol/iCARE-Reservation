@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, Mail, MailCheck, RotateCw } from "lucide-react";
@@ -15,6 +15,7 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { manilaNow } from "@/lib/reservationRules";
 import { ROOMS } from "@/lib/rooms";
 import { formatRange } from "@/lib/availability";
+import { useReservations } from "@/hooks/use-reservations";
 
 const today = () => manilaNow().slice(0, 10);
 
@@ -37,30 +38,11 @@ export default function SchedulePage() {
   const [month, setMonth] = useState(() => today().slice(0, 7));
   const [selected, setSelected] = useState(today);
   const [direction, setDirection] = useState(0);
-  const [reservations, setReservations] = useState([]);
-  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const { reservations, status, reload, retry } = useReservations(isAdmin);
 
   const [showLogin, setShowLogin] = useState(false);
   const [detail, setDetail] = useState(null);
   const [emailTarget, setEmailTarget] = useState(null);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/reservations", { cache: "no-store" });
-      if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      setReservations(await res.json());
-      setStatus("ready");
-    } catch {
-      setStatus("error");
-    }
-  }, []);
-
-  // Refetch when admin state changes: the API returns full rows only to admins.
-  useEffect(() => {
-    fetchData();
-    const refresh = setInterval(fetchData, 60_000);
-    return () => clearInterval(refresh);
-  }, [fetchData, isAdmin]);
 
   function goToMonth(next) {
     setDirection(next > month ? 1 : next < month ? -1 : 0);
@@ -119,10 +101,7 @@ export default function SchedulePage() {
           </p>
           <button
             type="button"
-            onClick={() => {
-              setStatus("loading");
-              fetchData();
-            }}
+            onClick={retry}
             className="lg-btn lg-btn-secondary"
           >
             <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />
@@ -219,14 +198,14 @@ export default function SchedulePage() {
           }}
         />
       )}
-      {emailTarget && <EmailModal reservation={emailTarget} onClose={() => setEmailTarget(null)} onSent={() => fetchData()} />}
+      {emailTarget && <EmailModal reservation={emailTarget} onClose={() => setEmailTarget(null)} onSent={reload} />}
       {detail && (
         <ReservationDetailModal
           reservation={detail}
           onClose={() => setDetail(null)}
           onUpdate={() => {
             setDetail(null);
-            fetchData();
+            reload();
           }}
         />
       )}

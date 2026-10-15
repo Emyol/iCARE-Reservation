@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AtSign, CircleAlert, CircleCheck, Info, Mail, Send, TriangleAlert, WandSparkles, X } from "lucide-react";
 import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 
 /**
@@ -109,9 +110,7 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-full bg-[var(--lg-free-soft)]">
-                <span aria-hidden="true" className="material-symbols-outlined text-[var(--lg-free)]">
-                  mail
-                </span>
+                <Mail aria-hidden="true" className="text-[var(--lg-free)] size-5" strokeWidth={1.75} />
               </div>
               <div>
                 <h2 id="email-title" className="lg-title">
@@ -127,7 +126,7 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
               onClick={onClose}
               className="lg-btn lg-btn-secondary lg-btn-icon"
             >
-              <span aria-hidden="true" className="material-symbols-outlined">close</span>
+              <X aria-hidden="true" className="size-5" strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -165,9 +164,7 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
               Recipient Email
             </p>
             <div className="lg-input flex items-center gap-2">
-              <span aria-hidden="true" className="material-symbols-outlined text-[18px] lg-muted">
-                email
-              </span>
+              <AtSign aria-hidden="true" className="size-[18px] lg-muted" strokeWidth={1.75} />
               <span
                 className={`text-[15px] ${recipientEmail ? "" : "text-[var(--lg-danger)]"}`}
               >
@@ -186,19 +183,19 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
                 {
                   value: "auto",
                   label: "Auto-detect",
-                  icon: "smart_toy",
+                  icon: WandSparkles,
                   desc: "Checks for conflicts automatically",
                 },
                 {
                   value: "confirmation",
                   label: "Confirmed",
-                  icon: "check_circle",
+                  icon: CircleCheck,
                   desc: "Reservation approved",
                 },
                 {
                   value: "conflict",
                   label: "Conflict",
-                  icon: "warning",
+                  icon: TriangleAlert,
                   desc: "Time slot overlap",
                 },
               ].map((opt) => (
@@ -213,9 +210,7 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
                       : "border-[var(--lg-line)] bg-[var(--lg-sheet-fill)] hover:bg-[var(--lg-solid)]"
                   }`}
                 >
-                  <span aria-hidden="true" className="material-symbols-outlined text-[20px] block mb-1">
-                    {opt.icon}
-                  </span>
+                  <opt.icon aria-hidden="true" className="mx-auto mb-1 size-5" strokeWidth={1.75} />
                   <p className="text-[13px] font-semibold">{opt.label}</p>
                 </button>
               ))}
@@ -224,9 +219,7 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
 
           {/* CC Notice */}
           <div className="flex items-start gap-2 rounded-[14px] border border-[var(--lg-line)] bg-[var(--lg-chrome-fill)] p-3">
-            <span aria-hidden="true" className="material-symbols-outlined mt-0.5 shrink-0 text-[18px] lg-muted">
-              info
-            </span>
+            <Info aria-hidden="true" className="mt-0.5 shrink-0 size-[18px] lg-muted" strokeWidth={1.75} />
             <p className="text-[13px] lg-muted">
               This email will be sent from your admin Outlook account. Other
               administrators will be automatically CC&apos;d.
@@ -236,9 +229,7 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
           {/* Success Message */}
           {success && (
             <div role="status" className="flex items-center gap-2 rounded-[14px] border border-[var(--lg-free)] bg-[var(--lg-free-soft)] p-3">
-              <span aria-hidden="true" className="material-symbols-outlined text-lg text-[var(--lg-free)]">
-                check_circle
-              </span>
+              <CircleCheck aria-hidden="true" className="size-5 text-[var(--lg-free)]" strokeWidth={1.75} />
               <div>
                 <p className="font-semibold">
                   Email sent successfully!
@@ -254,9 +245,7 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
           {/* Error Message */}
           {error && (
             <div role="alert" className="flex items-center gap-2 rounded-[14px] border border-[var(--lg-danger)] bg-[var(--lg-danger-soft)] p-3">
-              <span aria-hidden="true" className="material-symbols-outlined text-lg text-[var(--lg-danger)]">
-                error
-              </span>
+              <CircleAlert aria-hidden="true" className="size-5 text-[var(--lg-danger)]" strokeWidth={1.75} />
               <p className="text-[14px] font-medium">{error}</p>
             </div>
           )}
@@ -305,9 +294,7 @@ export default function EmailModal({ reservation, onClose, onSent, initialType =
                 </>
               ) : (
                 <>
-                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
-                    send
-                  </span>
+                  <Send aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
                   <span>Send Email</span>
                 </>
               )}
