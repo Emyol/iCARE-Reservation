@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import { Eye, EyeOff, X } from "lucide-react";
 import { useAccessibleDialog } from "@/hooks/use-accessible-dialog";
 
 /**
@@ -54,67 +56,49 @@ export default function AdminLoginModal({ onClose, onLogin }) {
   }
 
   return (
-    <div role="presentation"
-      className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-overlay"
+    <div
+      role="presentation"
+      className="lg-tokens lg-scrim fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="login-title" tabIndex={-1} className="relative bg-[#192233] border border-slate-800 w-full max-w-[440px] rounded-xl shadow-2xl modal-content">
-        {/* Header */}
-        <div className="p-6 text-center space-y-3">
-          <div className="w-12 h-12 bg-[#0f49bd]/20 rounded-full flex items-center justify-center mx-auto">
-            <span aria-hidden="true" className="material-symbols-outlined text-[#0f49bd] text-2xl">
-              admin_panel_settings
-            </span>
-          </div>
-          <div>
-            <h2 id="login-title" className="text-xl font-bold text-white">Welcome back</h2>
-            <p className="text-slate-400 text-sm mt-1">
-              Enter your admin credentials to manage reservations.
-            </p>
-          </div>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-title"
+        tabIndex={-1}
+        className="lg-sheet lg-materialize relative w-full max-w-[420px] p-7"
+      >
+        <div className="flex flex-col items-center gap-2 text-center">
+          <Image src="/brand/glass-pass-stack-login.webp" alt="" width={120} height={120} className="rounded-3xl" priority />
+          <h2 id="login-title" className="lg-title">Staff sign in</h2>
+          <p className="lg-muted">For iCARE staff managing reservations.</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 pb-2 space-y-4">
-          {/* Username */}
-          <div className="space-y-2">
-            <label htmlFor="login-username" className="block text-sm font-medium text-slate-300">
-              Username
-            </label>
-            <div className="relative">
-              <span aria-hidden="true" className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                person
-              </span>
-              <input
-                type="text"
-                id="login-username"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd] focus:border-transparent outline-none transition-all"
-                placeholder="Enter username"
-                disabled={loading}
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+          <div className="lg-field">
+            <label htmlFor="login-username">Username</label>
+            <input
+              type="text"
+              id="login-username"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="lg-input"
+              disabled={loading}
+            />
           </div>
 
-          {/* Password */}
-          <div className="space-y-2">
-            <label htmlFor="login-password" className="block text-sm font-medium text-slate-300">
-              Password
-            </label>
+          <div className="lg-field">
+            <label htmlFor="login-password">Password</label>
             <div className="relative">
-              <span aria-hidden="true" className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                lock
-              </span>
               <input
                 type={showPassword ? "text" : "password"}
                 id="login-password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-12 py-3.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#0f49bd] focus:border-transparent outline-none transition-all"
-                placeholder="••••••••"
+                className="lg-input pr-12"
                 disabled={loading}
               />
               <button
@@ -122,90 +106,35 @@ export default function AdminLoginModal({ onClose, onLogin }) {
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 aria-pressed={showPassword}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0f49bd] transition-colors"
+                className="lg-btn lg-btn-quiet absolute right-0 top-0 h-11 w-11 p-0"
               >
-                <span aria-hidden="true" className="material-symbols-outlined text-xl">
-                  {showPassword ? "visibility_off" : "visibility"}
-                </span>
+                {showPassword ? (
+                  <EyeOff aria-hidden="true" className="size-5" strokeWidth={1.75} />
+                ) : (
+                  <Eye aria-hidden="true" className="size-5" strokeWidth={1.75} />
+                )}
               </button>
             </div>
           </div>
 
-          {/* Error Message */}
           {error && (
-            <div role="alert" className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-lg">
-                error
-              </span>
-              <p className="text-sm text-red-400">{error}</p>
-            </div>
+            <p role="alert" className="rounded-[14px] border border-[var(--lg-danger)] bg-[var(--lg-danger-soft)] px-4 py-3 text-[14px] font-medium">
+              {error}
+            </p>
           )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#0f49bd] hover:bg-[#0f49bd]/90 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                <span>Authenticating...</span>
-              </>
-            ) : (
-              <>
-                <span>Sign In to Dashboard</span>
-                <span aria-hidden="true" className="material-symbols-outlined transition-transform group-hover:translate-x-1">
-                  arrow_forward
-                </span>
-              </>
-            )}
+          <button type="submit" disabled={loading} className="lg-btn lg-btn-primary mt-1 w-full">
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
-        {/* Footer */}
-        <div className="px-6 pb-6 pt-4">
-          <div className="relative py-3">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-700" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-transparent px-2 text-slate-400">
-                Security Notice
-              </span>
-            </div>
-          </div>
-          <p className="text-center text-xs text-slate-400">
-            This is a secure system. Authorized access only.
-          </p>
-        </div>
+        <p className="mt-5 text-center text-[13px] lg-muted">
+          Authorized iCARE staff only.
+        </p>
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition-colors"
-        >
-          <span aria-hidden="true" className="material-symbols-outlined">close</span>
+        {/* Last in the DOM so the dialog's first focus lands on Username. */}
+        <button type="button" onClick={onClose} aria-label="Close" className="lg-btn lg-btn-secondary lg-btn-icon absolute right-4 top-4">
+          <X aria-hidden="true" className="size-5" strokeWidth={2} />
         </button>
       </div>
     </div>

@@ -8,7 +8,10 @@
  */
 
 @layer components {
-  .lg {
+  /* `.lg-tokens` carries the palette and type without the page frame, so a
+     dialog can be glass even when it opens over a page not yet migrated. */
+  .lg,
+  .lg-tokens {
     --lg-ground: #dfe9e2;
     --lg-field: url("/brand/field-light.webp");
     --lg-ink: #0d1a12;
@@ -40,17 +43,21 @@
 
     --lg-font: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", sans-serif;
 
-    position: relative;
-    isolation: isolate;
-    min-height: 100vh;
-    background: var(--lg-ground);
     color: var(--lg-ink);
     font-family: var(--lg-font);
     color-scheme: light;
   }
 
+  .lg {
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    background: var(--lg-ground);
+  }
+
   @media (prefers-color-scheme: dark) {
-    .lg {
+    .lg,
+    .lg-tokens {
       --lg-ground: #0c1510;
       --lg-field: url("/brand/field-dark.webp");
       --lg-ink: #eef3ef;
@@ -89,9 +96,17 @@
     pointer-events: none;
   }
 
-  .lg :focus-visible {
+  .lg :focus-visible,
+  .lg-tokens :focus-visible {
     outline: 3px solid var(--lg-focus);
     outline-offset: 2px;
+  }
+
+  /* Dialog backdrop: dims the page a little so the sheet reads as modal. */
+  .lg-scrim {
+    background: rgba(9, 40, 22, 0.28);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
 
   /* ---------- Materials ---------- */
