@@ -14,14 +14,14 @@ const inputClass =
  * Sends POST /api/reservations. Overlaps come back as 409; the admin can then
  * save anyway with a reason. On success, calls onBooked() to refresh data.
  */
-export default function BookingModal({ onClose, onBooked }) {
+export default function BookingModal({ onClose, onBooked, initial = {} }) {
   const dialogRef = useAccessibleDialog(onClose);
   const today = manilaNow().slice(0, 10);
-  const [room, setRoom] = useState("");
+  const [room, setRoom] = useState(initial.room || "");
   const [eventName, setEventName] = useState("");
-  const [date, setDate] = useState(today);
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [date, setDate] = useState(initial.date || today);
+  const [start, setStart] = useState(initial.start || "");
+  const [end, setEnd] = useState(initial.end || "");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [attendees, setAttendees] = useState("");
