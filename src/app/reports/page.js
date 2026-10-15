@@ -1,241 +1,159 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
+import GlassShell from "@/components/glass/GlassShell";
+import { EASE_OUT } from "@/components/glass/motion";
 import AdminLoginModal from "@/components/AdminLoginModal";
-import Sidebar from "@/components/Sidebar";
-import Link from "next/link";
+import { ROOMS, findRoom } from "@/lib/rooms";
 
-const ROOM_AVR = "Audio-Visual Room / Enhancement Area (Capacity: 40)";
-const ROOM_TRAINING =
-  "Individual Training / Small Group Discussion Room (Capacity: 10)";
+const monthLabel = (key) =>
+  new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" });
 
 export default function ReportsPage() {
-  const { isAdmin, login, logout } = useAdmin();
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const { isAdmin, login } = useAdmin();
+  const [showLogin, setShowLogin] = useState(false);
   const [reservations, setReservations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [status, setStatus] = useState("loading"); // loading | ready | error
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/reservations", { cache: "no-store" });
       if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      const data = await res.json();
-      setReservations(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setReservations(await res.json());
+      setStatus("ready");
+    } catch {
+      setStatus("error");
     }
   }, []);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60_000);
-    return () => clearInterval(interval);
+    const refresh = setInterval(fetchData, 60_000);
+    return () => clearInterval(refresh);
   }, [fetchData]);
 
-  const total = reservations.length;
-  const avrCount = reservations.filter((r) => (r.room || "").trim() === ROOM_AVR).length;
-  const trainingCount = reservations.filter(
-    (r) => (r.room || "").trim() === ROOM_TRAINING,
-  ).length;
-
-  // Group by month
-  const byMonth = reservations.reduce((acc, r) => {
-    const key = new Date(r.startTime).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-
-  const monthEntries = Object.entries(byMonth).sort(
-    (a, b) => new Date(b[0]) - new Date(a[0]),
-  );
-
+  const dated = reservations.filter((r) => r.startTime);
   const stats = [
-    {
-      label: "Total Reservations",
-      value: total,
-      icon: "check_circle",
-      color: "emerald",
-    },
-    {
-      label: "Audio-Visual Room / Enhancement Area (Capacity: 40)",
-      value: avrCount,
-      icon: "videocam",
-      color: "blue",
-    },
-    {
-      label: "Individual Training / Small Group Discussion Room (Capacity: 10)",
-      value: trainingCount,
-      icon: "groups",
-      color: "amber",
-    },
+    { label: "All bookings", value: dated.length },
+    ...ROOMS.map((room) => ({
+      label: room.label,
+      hint: `Fits ${room.capacity}`,
+      value: dated.filter((r) => findRoom(r.room) === room).length,
+    })),
   ];
 
-  const colorMap = {
-    emerald: {
-      bg: "bg-emerald-500/10",
-      text: "text-emerald-400",
-      border: "hover:border-emerald-500/20",
-    },
-    blue: {
-      bg: "bg-blue-500/10",
-      text: "text-blue-400",
-      border: "hover:border-blue-500/20",
-    },
-    amber: {
-      bg: "bg-amber-500/10",
-      text: "text-amber-400",
-      border: "hover:border-amber-500/20",
-    },
-  };
-
-  function handleLogin(adminInfo) {
-    login(adminInfo);
-    setShowLoginModal(false);
+  // "YYYY-MM" keys sort as text, newest first; split per room for the bars.
+  const byMonth = {};
+  for (const r of dated) {
+    const key = r.startTime.slice(0, 7);
+    const room = findRoom(r.room);
+    byMonth[key] ??= { total: 0, perRoom: Object.fromEntries(ROOMS.map((x) => [x.value, 0])) };
+    byMonth[key].total += 1;
+    if (room) byMonth[key].perRoom[room.value] += 1;
   }
+  const months = Object.entries(byMonth).sort(([a], [b]) => b.localeCompare(a));
+  const busiest = Math.max(1, ...months.map(([, m]) => m.total));
+  const loading = status === "loading" && reservations.length === 0;
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      <Sidebar
-        isAdmin={isAdmin}
-        onLoginClick={() => setShowLoginModal(true)}
-        onLogout={logout}
-      />
+    <GlassShell onSignIn={isAdmin ? null : () => setShowLogin(true)}>
+      <div className="lg-chrome flex flex-wrap items-center gap-3 px-4 py-3">
+        <h1 className="lg-title mr-auto">Reports</h1>
+        <p className="text-[13px] lg-muted">Every booking in the sheet, past and upcoming.</p>
+      </div>
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:px-8 sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              aria-label="Back to dashboard"
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
-                arrow_back
-              </span>
-            </Link>
-            <h2 className="text-lg md:text-xl font-bold tracking-tight">
-              <span className="text-teal-400">iCARE</span> Reports
-            </h2>
-          </div>
-        </header>
-
-        <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto w-full">
-          <div>
-            <h3 className="text-2xl font-bold text-white mb-1">
-              Reservation Reports
-            </h3>
-            <p className="text-slate-400 text-sm">
-              Overall booking statistics from Google Sheets data.
-            </p>
-          </div>
-
-          {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {stats.map((s) => {
-              const c = colorMap[s.color];
-              return (
-                <div
-                  key={s.label}
-                  className={`glass-panel/60 p-6 rounded-xl border border-white/5 ${c.border} flex items-center gap-4 transition-colors`}
-                >
-                  <div
-                    className={`size-12 rounded-lg ${c.bg} flex items-center justify-center`}
-                  >
-                    <span aria-hidden="true" className={`material-symbols-outlined ${c.text}`}>
-                      {s.icon}
-                    </span>
-                  </div>
-                  <div>
-                    {loading ? (
-                      <div className="skeleton w-10 h-7 rounded mb-1" />
-                    ) : (
-                      <p className="text-2xl font-bold">{s.value}</p>
-                    )}
-                    <p className="text-xs text-slate-400 font-medium">
-                      {s.label}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Bookings by Month */}
-          <div className="glass-panel/60 rounded-xl border border-white/5 overflow-hidden">
-            <div className="p-4 border-b border-white/5 flex items-center gap-2">
-              <span aria-hidden="true" className="material-symbols-outlined text-slate-400 text-[20px]">
-                calendar_month
-              </span>
-              <h4 className="text-sm font-semibold text-slate-200">
-                Bookings by Month
-              </h4>
-            </div>
-            {loading ? (
-              <div className="p-4 space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="skeleton h-8 rounded" />
-                ))}
-              </div>
-            ) : monthEntries.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">
-                No data available
-              </div>
-            ) : (
-              <div className="divide-y divide-white/5">
-                {monthEntries.map(([month, count]) => {
-                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                  return (
-                    <div
-                      key={month}
-                      className="px-4 py-3 flex items-center gap-4"
-                    >
-                      <span className="text-sm text-slate-300 w-40 shrink-0">
-                        {month}
-                      </span>
-                      <div className="flex-1 bg-white/5 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-indigo-500 to-teal-500 rounded-full"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-semibold text-slate-200 w-8 text-right">
-                        {count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-400 text-xs">
-            © {new Date().getFullYear()} iCARE Room Reservation System — FEU
-            Institute of Technology
+      {status === "error" && (
+        <div role="alert" className="lg-banner">
+          <p>
+            <strong>Couldn&apos;t load the numbers.</strong> Check your connection and try again.
           </p>
-        </footer>
-      </main>
-      {showLoginModal && (
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("loading");
+              fetchData();
+            }}
+            className="lg-btn lg-btn-secondary"
+          >
+            <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />
+            Retry
+          </button>
+        </div>
+      )}
+
+      <dl className="grid gap-4 sm:grid-cols-3">
+        {stats.map((s) => (
+          <div key={s.label} className="lg-pass flex flex-col gap-1 p-5">
+            <dt className="lg-label">{s.label}</dt>
+            <dd className="lg-display lg-num">{loading ? <span className="lg-muted">-</span> : s.value}</dd>
+            {s.hint && <dd className="text-[13px] lg-muted">{s.hint}</dd>}
+          </div>
+        ))}
+      </dl>
+
+      <section className="lg-sheet flex flex-col gap-4 p-6" aria-labelledby="by-month-title">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 id="by-month-title" className="lg-title">
+            Bookings by month
+          </h2>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-medium" aria-label="Legend">
+            <li className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-2.5 w-5 rounded-full bg-[var(--lg-booked)]" />
+              {ROOMS[0].label}
+            </li>
+            <li className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-2.5 w-5 rounded-full bg-[var(--lg-attention)]" />
+              {ROOMS[1].label}
+            </li>
+          </ul>
+        </div>
+        {loading ? (
+          <div className="h-40 animate-pulse rounded-[14px] bg-[var(--lg-line)] motion-reduce:animate-none" aria-hidden="true" />
+        ) : months.length === 0 ? (
+          <p className="lg-muted">No bookings yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {months.map(([key, m], i) => (
+              <li key={key} className="grid grid-cols-[120px_minmax(0,1fr)_40px] items-center gap-3 sm:grid-cols-[160px_minmax(0,1fr)_48px]">
+                <span className="text-[14px] font-semibold">{monthLabel(key)}</span>
+                {/* Bars grow from the left once, on first load, so the busiest months read first. */}
+                <motion.span
+                  className="flex h-3 origin-left overflow-hidden rounded-full"
+                  style={{ width: `${(m.total / busiest) * 100}%` }}
+                  initial={{ transform: "scaleX(0)" }}
+                  animate={{ transform: "scaleX(1)" }}
+                  transition={{ duration: 0.5, ease: EASE_OUT, delay: Math.min(i, 8) * 0.04 }}
+                  aria-hidden="true"
+                >
+                  <span className="h-full bg-[var(--lg-booked)]" style={{ flexGrow: m.perRoom[ROOMS[0].value] }} />
+                  <span className="h-full bg-[var(--lg-attention)]" style={{ flexGrow: m.perRoom[ROOMS[1].value] }} />
+                  <span className="h-full bg-[var(--lg-ink-muted)]" style={{ flexGrow: m.total - m.perRoom[ROOMS[0].value] - m.perRoom[ROOMS[1].value] }} />
+                </motion.span>
+                <span className="text-right text-[15px] font-bold lg-num">
+                  {m.total}
+                  <span className="sr-only">
+                    {" "}
+                    bookings: {m.perRoom[ROOMS[0].value]} {ROOMS[0].label}, {m.perRoom[ROOMS[1].value]} {ROOMS[1].label}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {showLogin && (
         <AdminLoginModal
-          onClose={() => setShowLoginModal(false)}
-          onLogin={handleLogin}
+          onClose={() => setShowLogin(false)}
+          onLogin={(info) => {
+            login(info);
+            setShowLogin(false);
+          }}
         />
       )}
-    </div>
+    </GlassShell>
   );
 }
-

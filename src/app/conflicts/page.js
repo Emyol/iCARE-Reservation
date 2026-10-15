@@ -1,304 +1,208 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { CircleCheck, RotateCw } from "lucide-react";
 import { useAdmin } from "@/components/AdminProvider";
+import GlassShell from "@/components/glass/GlassShell";
+import StaffOnly from "@/components/glass/StaffOnly";
+import { dealIn } from "@/components/glass/motion";
 import AdminLoginModal from "@/components/AdminLoginModal";
-import Sidebar from "@/components/Sidebar";
-import Link from "next/link";
+import ReservationDetailModal from "@/components/ReservationDetailModal";
+import { useHydrated } from "@/hooks/use-hydrated";
+import { manilaNow } from "@/lib/reservationRules";
+import { findRoom } from "@/lib/rooms";
+import { formatRange, minutesOf } from "@/lib/availability";
+
+/** Every pair of bookings in the same room whose times overlap. */
+function findConflicts(reservations) {
+  const rows = reservations.filter((r) => r.startTime && r.endTime);
+  const pairs = [];
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length; j++) {
+      const [a, b] = [rows[i], rows[j]];
+      if ((a.room || "").trim() !== (b.room || "").trim()) continue;
+      if (a.startTime < b.endTime && b.startTime < a.endTime) pairs.push(a.startTime <= b.startTime ? [a, b] : [b, a]);
+    }
+  }
+  return pairs.sort(([a], [b]) => a.startTime.localeCompare(b.startTime));
+}
+
+const submittedAt = (r) => {
+  const d = new Date(r.timestamp);
+  return r.timestamp && !Number.isNaN(d.getTime()) ? d : null;
+};
+
+const longDay = (dateTime) =>
+  new Date(`${dateTime.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+function ConflictCard({ pair, onOpen, index }) {
+  const [a, b] = pair;
+  const [ta, tb] = pair.map(submittedAt);
+  const first = ta && tb && ta.getTime() !== tb.getTime() ? (ta < tb ? a : b) : null;
+  const room = findRoom(a.room);
+  return (
+    <motion.li {...dealIn(index)} className="lg-pass flex flex-col gap-3 p-5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="lg-pill lg-pill-conflict">Conflict</span>
+        <h3 className="text-[17px] font-bold">
+          {longDay(a.startTime)}, {room ? room.label : a.room}
+        </h3>
+      </div>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {pair.map((r) => (
+          <li key={r.rowIndex ?? r.startTime} className="flex flex-col gap-1.5 rounded-[14px] border border-[var(--lg-danger)] bg-[var(--lg-danger-soft)] p-3">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-[15px] font-bold">{r.eventName}</span>
+              {first && (
+                <span className={`lg-pill ${r === first ? "lg-pill-confirmed" : "lg-pill-pending"}`}>
+                  {r === first ? "Submitted first" : "Submitted later"}
+                </span>
+              )}
+            </span>
+            <span className="text-[14px] lg-num">{formatRange(minutesOf(r.startTime), minutesOf(r.endTime))}</span>
+            {r.fullName && <span className="text-[13px] lg-muted">{r.fullName}</span>}
+            <span className="text-[13px] lg-muted lg-num">
+              Submitted{" "}
+              {submittedAt(r)
+                ? submittedAt(r).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                : "date unknown"}
+            </span>
+            <button type="button" onClick={() => onOpen(r)} className="lg-btn lg-btn-secondary mt-1 min-h-10 self-start">
+              Open
+            </button>
+          </li>
+        ))}
+      </ul>
+    </motion.li>
+  );
+}
 
 export default function ConflictsPage() {
-  const { isAdmin, login, logout } = useAdmin();
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const { isAdmin, login } = useAdmin();
+  const hydrated = useHydrated();
+  const [showLogin, setShowLogin] = useState(false);
   const [reservations, setReservations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const [detail, setDetail] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/reservations", { cache: "no-store" });
       if (!res.ok) throw new Error(`Failed to fetch (${res.status})`);
-      const data = await res.json();
-      setReservations(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setReservations(await res.json());
+      setStatus("ready");
+    } catch {
+      setStatus("error");
     }
   }, []);
 
   // Refetch when admin state changes: the API returns full rows only to admins.
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60_000);
-    return () => clearInterval(interval);
+    const refresh = setInterval(fetchData, 60_000);
+    return () => clearInterval(refresh);
   }, [fetchData, isAdmin]);
 
-  function handleLogin(adminInfo) {
-    login(adminInfo);
-    setShowLoginModal(false);
-  }
-
-  // Find all conflicts: pairs of overlapping reservations in the same room
-  const conflicts = useMemo(() => {
-    const pairs = [];
-    for (let i = 0; i < reservations.length; i++) {
-      for (let j = i + 1; j < reservations.length; j++) {
-        const a = reservations[i];
-        const b = reservations[j];
-        if (a.room !== b.room) continue;
-        const aStart = new Date(a.startTime);
-        const aEnd = new Date(a.endTime);
-        const bStart = new Date(b.startTime);
-        const bEnd = new Date(b.endTime);
-        if (aStart < bEnd && aEnd > bStart) {
-          pairs.push({ a, b });
-        }
-      }
-    }
-    // Sort by date (most recent first)
-    pairs.sort((x, y) => new Date(y.a.startTime) - new Date(x.a.startTime));
-    return pairs;
-  }, [reservations]);
-
-  const formatDate = (iso) =>
-    new Date(iso).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  const formatTime = (iso) =>
-    new Date(iso).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-  const parseTimestamp = (ts) => {
-    if (!ts) return null;
-    const d = new Date(ts);
-    return isNaN(d.getTime()) ? null : d;
-  };
-
-  const formatTimestamp = (ts) => {
-    if (!ts) return "N/A";
-    const d = new Date(ts);
-    if (isNaN(d.getTime())) return ts;
-    return d.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
+  const signIn = () => setShowLogin(true);
+  const now = hydrated ? manilaNow().slice(0, 16) : "";
+  const conflicts = findConflicts(reservations);
+  // Still to happen (or under way), soonest first; past ones newest first.
+  const upcoming = conflicts.filter((p) => p.some((r) => r.endTime > now));
+  const past = conflicts.filter((p) => !upcoming.includes(p)).reverse();
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      <Sidebar
-        isAdmin={isAdmin}
-        onLoginClick={() => setShowLoginModal(true)}
-        onLogout={logout}
-      />
+    <GlassShell onSignIn={isAdmin ? null : signIn}>
+      <div className="lg-chrome flex flex-wrap items-center gap-3 px-4 py-3">
+        <h1 className="lg-title mr-auto">Conflicts</h1>
+        <p className="text-[13px] lg-muted">Bookings in the same room whose times overlap.</p>
+      </div>
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-black/10 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:px-8 sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              aria-label="Back to dashboard"
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
-                arrow_back
-              </span>
-            </Link>
-            <h2 className="text-lg md:text-xl font-bold tracking-tight">
-              <span className="text-teal-400">iCARE</span> Conflict Detection
-            </h2>
-          </div>
-        </header>
-
-        <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto w-full">
-          <div>
-            <h3 className="text-2xl font-bold text-white mb-1">
-              Schedule Conflicts
-            </h3>
-            <p className="text-slate-400 text-sm">
-              Automatically detects overlapping reservations for the same room.
-            </p>
-          </div>
-
-          {!isAdmin && (
-            <div className="glass-panel/60 rounded-xl border border-amber-500/20 p-8 text-center">
-              <span aria-hidden="true" className="material-symbols-outlined text-amber-400 text-4xl mb-3 block">
-                shield
-              </span>
-              <p className="text-amber-400 font-semibold text-sm">
-                Admin access required
-              </p>
-              <p className="text-slate-400 text-xs mt-1">
-                Log in as an admin to view schedule conflicts.
-              </p>
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="mt-4 px-4 py-2 text-sm font-medium text-white auro-button rounded-lg"
-              >
-                Admin Login
-              </button>
-            </div>
-          )}
-
-          {isAdmin && error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {isAdmin && loading && (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="skeleton h-24 rounded-xl" />
-              ))}
-            </div>
-          )}
-
-          {isAdmin && !loading && conflicts.length === 0 && (
-            <div className="glass-panel/60 rounded-xl border border-emerald-500/20 p-12 text-center">
-              <span aria-hidden="true" className="material-symbols-outlined text-emerald-400 text-5xl mb-3 block">
-                check_circle
-              </span>
-              <p className="text-emerald-400 font-semibold text-lg">
-                No conflicts detected!
-              </p>
-              <p className="text-slate-400 text-sm mt-1">
-                All reservations are scheduled without overlaps.
-              </p>
-            </div>
-          )}
-
-          {isAdmin && !loading && conflicts.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-[20px]">
-                  warning
-                </span>
-                <span className="text-sm font-semibold text-red-400">
-                  {conflicts.length} conflict{conflicts.length > 1 ? "s" : ""}{" "}
-                  found
-                </span>
-              </div>
-
-              {conflicts.map(({ a, b }, idx) => {
-                // Determine priority based on submission timestamp
-                const aTs = parseTimestamp(a.timestamp);
-                const bTs = parseTimestamp(b.timestamp);
-                let aPriority = null;
-                let bPriority = null;
-                if (aTs && bTs) {
-                  if (aTs < bTs) {
-                    aPriority = true;
-                    bPriority = false;
-                  } else if (bTs < aTs) {
-                    bPriority = true;
-                    aPriority = false;
-                  }
-                }
-                const priorities = [aPriority, bPriority];
-
-                return (
-                  <div
-                    key={idx}
-                    className="glass-panel/60 rounded-xl border border-red-500/20 overflow-hidden"
-                  >
-                    <div className="px-4 py-3 border-b border-red-500/10 bg-red-500/5 flex items-center gap-2">
-                      <span aria-hidden="true" className="material-symbols-outlined text-red-400 text-[18px]">
-                        schedule
-                      </span>
-                      <span
-                        className="text-sm font-medium text-slate-300"
-                        suppressHydrationWarning
-                      >
-                        {formatDate(a.startTime)} — {a.room?.split(" /")[0]}
-                      </span>
-                    </div>
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {[a, b].map((r, i) => {
-                        const hasPriority = priorities[i];
-                        return (
-                          <div
-                            key={i}
-                            className={`p-3 rounded-lg border ${
-                              hasPriority === true
-                                ? "border-emerald-500/30 bg-emerald-500/5"
-                                : hasPriority === false
-                                  ? "border-red-500/20 bg-red-500/5"
-                                  : i === 0
-                                    ? "border-red-500/20 bg-red-500/5"
-                                    : "border-amber-500/20 bg-amber-500/5"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              {hasPriority === true && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                  <span aria-hidden="true" className="material-symbols-outlined text-[12px]">
-                                    verified
-                                  </span>
-                                  Priority
-                                </span>
-                              )}
-                              {hasPriority === false && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide bg-red-500/15 text-red-400 border border-red-500/30">
-                                  <span aria-hidden="true" className="material-symbols-outlined text-[12px]">
-                                    schedule
-                                  </span>
-                                  Later Submission
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm font-semibold text-white truncate">
-                              {r.eventName}
-                            </p>
-                            <p
-                              className="text-xs text-slate-400 mt-1"
-                              suppressHydrationWarning
-                            >
-                              {formatTime(r.startTime)} –{" "}
-                              {formatTime(r.endTime)}
-                            </p>
-                            {r.fullName && (
-                              <p className="text-xs text-slate-400 mt-0.5">
-                                {r.fullName}
-                              </p>
-                            )}
-                            <p
-                              className="text-xs text-slate-400 mt-1.5"
-                              suppressHydrationWarning
-                            >
-                              Submitted: {formatTimestamp(r.timestamp)}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <footer className="mt-auto px-8 py-6 border-t border-white/5 text-center">
-          <p className="text-slate-400 text-xs">
-            © {new Date().getFullYear()} iCARE Room Reservation System — FEU
-            Institute of Technology
+      {!isAdmin ? (
+        <StaffOnly what="overlapping bookings" onSignIn={signIn} />
+      ) : status === "error" ? (
+        <div role="alert" className="lg-banner">
+          <p>
+            <strong>Couldn&apos;t load bookings.</strong> Check your connection and try again.
           </p>
-        </footer>
-      </main>
-      {showLoginModal && (
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("loading");
+              fetchData();
+            }}
+            className="lg-btn lg-btn-secondary"
+          >
+            <RotateCw aria-hidden="true" className="size-4" strokeWidth={2} />
+            Retry
+          </button>
+        </div>
+      ) : !hydrated || status === "loading" ? (
+        <div className="lg-pass h-40 animate-pulse motion-reduce:animate-none" aria-hidden="true" />
+      ) : (
+        <>
+          {upcoming.length === 0 ? (
+            <section className="lg-pass flex items-center gap-4 p-6">
+              <CircleCheck aria-hidden="true" className="size-8 shrink-0 text-[var(--lg-free)]" strokeWidth={1.75} />
+              <div>
+                <h2 className="lg-title">No upcoming conflicts</h2>
+                <p className="mt-1 lg-muted">Every booking from today on has its room to itself.</p>
+              </div>
+            </section>
+          ) : (
+            <section className="flex flex-col gap-3" aria-labelledby="upcoming-title">
+              <h2 id="upcoming-title" className="px-1 text-[17px] font-bold">
+                {upcoming.length} upcoming conflict{upcoming.length === 1 ? "" : "s"}, soonest first
+              </h2>
+              <ul className="flex flex-col gap-3">
+                {upcoming.map((pair, i) => (
+                  <ConflictCard key={pair.map((r) => r.rowIndex ?? r.startTime).join("-")} pair={pair} index={i} onOpen={setDetail} />
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {past.length > 0 && (
+            <details className="lg-sheet group p-5">
+              <summary className="cursor-pointer text-[17px] font-bold">
+                Past conflicts ({past.length})
+                <span className="ml-2 text-[14px] font-normal lg-muted">for the record; nothing to resolve</span>
+              </summary>
+              <ul className="mt-4 flex flex-col gap-3">
+                {past.map((pair, i) => (
+                  <ConflictCard key={pair.map((r) => r.rowIndex ?? r.startTime).join("-")} pair={pair} index={i} onOpen={setDetail} />
+                ))}
+              </ul>
+            </details>
+          )}
+        </>
+      )}
+
+      {showLogin && (
         <AdminLoginModal
-          onClose={() => setShowLoginModal(false)}
-          onLogin={handleLogin}
+          onClose={() => setShowLogin(false)}
+          onLogin={(info) => {
+            login(info);
+            setShowLogin(false);
+          }}
         />
       )}
-    </div>
+      {detail && (
+        <ReservationDetailModal
+          reservation={detail}
+          onClose={() => setDetail(null)}
+          onUpdate={() => {
+            setDetail(null);
+            fetchData();
+          }}
+        />
+      )}
+    </GlassShell>
   );
 }
