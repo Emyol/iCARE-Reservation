@@ -1,0 +1,364 @@
+/*
+ * Liquid Glass design system (DESIGN.md at the workspace root).
+ * Pages opt in by wrapping their content in `.lg`, so screens that haven't
+ * been redesigned yet keep the old dark look until they're migrated.
+ */
+
+.lg {
+  --lg-ground: #dfe9e2;
+  --lg-field: url("/brand/field-light.webp");
+  --lg-ink: #0d1a12;
+  --lg-ink-muted: rgba(13, 26, 18, 0.72);
+  --lg-line: rgba(13, 26, 18, 0.12);
+  --lg-action: #0d4429;
+  --lg-action-hover: #0a3620;
+  --lg-action-ink: #ffffff;
+  --lg-brand: #0e6b3b;
+  --lg-booked: #0c543d;
+  --lg-booked-2: #478758;
+  --lg-free: #0e6b3b;
+  --lg-free-soft: rgba(219, 240, 220, 0.75);
+  --lg-attention: #f2b705;
+  --lg-attention-soft: #fbedb8;
+  --lg-attention-ink: #0d1a12;
+  --lg-danger: #c42a1f;
+  --lg-danger-soft: #f2dad5;
+  --lg-focus: #2dd4bf;
+
+  --lg-chrome-fill: rgba(255, 255, 255, 0.55);
+  --lg-pass-fill: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.46));
+  --lg-sheet-fill: rgba(255, 255, 255, 0.86);
+  --lg-rim: rgba(255, 255, 255, 0.7);
+  --lg-rim-strong: rgba(255, 255, 255, 0.9);
+  --lg-shadow: 0 18px 50px rgba(9, 40, 22, 0.22);
+  --lg-shadow-soft: 0 6px 20px rgba(9, 40, 22, 0.14);
+  --lg-solid: #f6f8f6;
+
+  --lg-font: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", sans-serif;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background: var(--lg-ground);
+  color: var(--lg-ink);
+  font-family: var(--lg-font);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  .lg {
+    --lg-ground: #0c1510;
+    --lg-field: url("/brand/field-dark.webp");
+    --lg-ink: #eef3ef;
+    --lg-ink-muted: rgba(238, 243, 239, 0.74);
+    --lg-line: rgba(238, 243, 239, 0.14);
+    --lg-action: #3ccf7a;
+    --lg-action-hover: #5ad992;
+    --lg-action-ink: #06261a;
+    --lg-brand: #3ccf7a;
+    --lg-booked: #2fa866;
+    --lg-booked-2: #1f7a4a;
+    --lg-free: #5ad992;
+    --lg-free-soft: rgba(47, 168, 102, 0.16);
+    --lg-attention-soft: rgba(242, 183, 5, 0.18);
+    --lg-danger: #ff6b5e;
+    --lg-danger-soft: rgba(255, 107, 94, 0.16);
+    --lg-chrome-fill: rgba(22, 32, 26, 0.58);
+    --lg-pass-fill: linear-gradient(135deg, rgba(30, 44, 36, 0.78), rgba(20, 30, 24, 0.62));
+    --lg-sheet-fill: rgba(20, 30, 24, 0.86);
+    --lg-rim: rgba(255, 255, 255, 0.12);
+    --lg-rim-strong: rgba(255, 255, 255, 0.2);
+    --lg-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    --lg-shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.35);
+    --lg-solid: #18211c;
+    color-scheme: dark;
+  }
+}
+
+/* The green and gold field, generated with the Figma image MCP. Static. */
+.lg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--lg-ground) var(--lg-field) center / cover no-repeat;
+  pointer-events: none;
+}
+
+.lg :focus-visible {
+  outline: 3px solid var(--lg-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Materials ---------- */
+
+.lg-chrome,
+.lg-pass,
+.lg-sheet {
+  border: 1px solid var(--lg-rim);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+
+.lg-chrome {
+  background: var(--lg-chrome-fill);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 var(--lg-rim-strong), var(--lg-shadow-soft);
+}
+
+.lg-pass {
+  background: var(--lg-pass-fill);
+  border-radius: 22px;
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  backdrop-filter: blur(26px) saturate(180%);
+  box-shadow: inset 0 1px 0 var(--lg-rim-strong), inset 0 -1px 0 rgba(255, 255, 255, 0.2), var(--lg-shadow);
+}
+
+.lg-sheet {
+  background: var(--lg-sheet-fill);
+  border-radius: 28px;
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  backdrop-filter: blur(30px) saturate(160%);
+  box-shadow: inset 0 1px 0 var(--lg-rim-strong), var(--lg-shadow);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .lg-chrome,
+  .lg-pass,
+  .lg-sheet {
+    background: var(--lg-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .lg-chrome,
+  .lg-pass,
+  .lg-sheet {
+    background: var(--lg-solid);
+    border-color: var(--lg-ink);
+  }
+}
+
+/* ---------- Type ---------- */
+
+.lg-display {
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.lg-title {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.lg-label {
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lg-ink-muted);
+}
+
+.lg-muted {
+  color: var(--lg-ink-muted);
+}
+
+.lg-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Controls ---------- */
+
+.lg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: 600 15px/1 var(--lg-font);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 100ms ease-out;
+}
+
+.lg-btn:active {
+  transform: scale(0.97);
+}
+
+.lg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.lg-btn-primary {
+  background: var(--lg-action);
+  color: var(--lg-action-ink);
+}
+
+.lg-btn-primary:hover:not(:disabled) {
+  background: var(--lg-action-hover);
+}
+
+.lg-btn-secondary {
+  background: var(--lg-sheet-fill);
+  color: var(--lg-ink);
+  border-color: var(--lg-line);
+}
+
+.lg-btn-secondary:hover:not(:disabled) {
+  background: var(--lg-solid);
+}
+
+.lg-btn-quiet {
+  background: transparent;
+  color: var(--lg-ink);
+  padding: 0 12px;
+}
+
+.lg-btn-quiet:hover:not(:disabled) {
+  background: var(--lg-chrome-fill);
+}
+
+.lg-btn-icon {
+  width: 44px;
+  padding: 0;
+}
+
+.lg-segmented {
+  display: inline-flex;
+  padding: 4px;
+  gap: 2px;
+  border-radius: 999px;
+  background: var(--lg-chrome-fill);
+  border: 1px solid var(--lg-rim);
+}
+
+.lg-segmented button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--lg-ink);
+  font: 600 14px/1 var(--lg-font);
+  cursor: pointer;
+}
+
+.lg-segmented button[aria-pressed="true"] {
+  background: var(--lg-action);
+  color: var(--lg-action-ink);
+}
+
+.lg-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lg-ink);
+}
+
+.lg-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--lg-line);
+  background: var(--lg-sheet-fill);
+  color: var(--lg-ink);
+  font: 400 15px/1.4 var(--lg-font);
+}
+
+/* ---------- Status ---------- */
+
+.lg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font: 700 12px/1.4 var(--lg-font);
+  white-space: nowrap;
+}
+
+.lg-pill-confirmed {
+  background: var(--lg-ink);
+  color: var(--lg-ground);
+}
+
+.lg-pill-pending {
+  background: var(--lg-attention);
+  color: var(--lg-attention-ink);
+}
+
+.lg-pill-conflict {
+  background: var(--lg-danger);
+  color: #ffffff;
+}
+
+.lg-pill-void {
+  background: var(--lg-line);
+  color: var(--lg-ink-muted);
+  text-decoration: line-through;
+}
+
+.lg-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--lg-brand);
+  color: #ffffff;
+  font: 700 12px/1.4 var(--lg-font);
+  letter-spacing: 0.04em;
+}
+
+.lg-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: var(--lg-attention-soft);
+  border: 1px solid var(--lg-attention);
+  color: var(--lg-ink);
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes lg-materialize {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+    -webkit-backdrop-filter: blur(0);
+    backdrop-filter: blur(0);
+  }
+}
+
+.lg-materialize {
+  animation: lg-materialize 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-materialize {
+    animation: none;
+  }
+
+  .lg-btn,
+  .lg-btn:active {
+    transition: none;
+    transform: none;
+  }
+}
