@@ -29,7 +29,7 @@ export async function GET(request) {
     response.headers.set("Cache-Control", "private, no-store, max-age=0");
     return response;
   } catch (error) {
-    console.error("[DEBUG] Error fetching reservations:", error.message);
+    console.error("Error fetching reservations:", error.message);
     return NextResponse.json(
       { error: "Failed to fetch reservations" },
       { status: 500 },
